@@ -259,3 +259,5 @@ Decisiones que conviene no re-litigar sin releer la historia del proyecto:
 - **Un pattern por constraintSpec**: heredado de la extracción TEI; hace
   estructuralmente imposible el shadowing entre constraintSpecs que afectó
   a versiones antiguas del esquema.
+
+Copyright (c) 2026 Nicolas Vaughan (nivaca@fastmail.com)

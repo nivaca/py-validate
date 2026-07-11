@@ -263,3 +263,5 @@ Decisions best not re-litigated without rereading the project's history:
 - **One pattern per constraintSpec**: inherited from the TEI extraction; it
   makes the cross-constraintSpec shadowing that afflicted older versions of
   the schema structurally impossible.
+
+Copyright (c) 2026 Nicolas Vaughan (nivaca@fastmail.com)
