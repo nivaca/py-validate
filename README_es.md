@@ -144,6 +144,9 @@ python3 validate.py -s smed-schema.sch ed_lat.xml || echo "hay pendientes"
 Cubierto — el subconjunto exacto que usa el ODD smed:
 
 - `pattern`, `rule`, `assert`, `report`, `let`;
+- `current()` (función XSLT usada por las reglas de las Guidelines P5): se
+  traduce a una ligadura del nodo de contexto (`let $VALIDATE_CTX := .`) con
+  sustitución textual, que reproduce exactamente su semántica Schematron;
 - **first-match shadowing dentro de cada pattern**: un nodo casado por una
   regla anterior del mismo pattern queda excluido de las siguientes,
   conforme al estándar. (La extracción TEI emite un pattern por
@@ -208,6 +211,41 @@ documento. Dos rutas:
   (Jing) y el Schematron de P5 aporta solo unas decenas de co-restricciones
   — aquí el runner es el complemento, no el plato principal.
 
+**De dónde obtener `tei_all.rng`** (no lo generes: se distribuye compilado,
+con el Schematron de las Guidelines embebido):
+
+```sh
+# release oficial de TEI (la más reciente):
+curl -sLO https://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng
+# o el que trae tu oXygen (misma versión de P5 que tu editor):
+#   $OXYGEN_HOME/frameworks/tei/xml/tei/custom/schema/relaxng/tei_all.rng
+```
+
+Elige **una** fuente y úsala para ambas capas: mezclar el `.rng` de oXygen
+en Jing con el de tei-c.org en el runner (o viceversa) puede producir
+discrepancias entre capas por diferencia de versión de P5.
+
+**Receta bicapa completa contra el estándar:**
+
+```sh
+jing tei_all.rng documento.xml && python3 validate.py -r tei_all.rng documento.xml
+```
+
+El `&&` corta en la primera capa que falle; tras el runner, `$? -eq 1`
+significa inequívocamente "infracciones Schematron" (no error de entorno,
+que es 3). La primera corrida cosecha a `tei_all.harvested.sch` (muchos más
+patterns que un esquema de proyecto: tei_all incluye todos los módulos);
+las siguientes usan la caché.
+
+Nota sobre recuentos: el `.rng` generado de un ODD embebe, además de las
+reglas propias, el Schematron de las Guidelines para cada módulo incluido
+(p. ej. "Abstract model violation: Lines may not contain hi", regla P5
+sobre `tei:l`). La ruta `-r` valida por tanto un **superconjunto** de la
+ruta `-o` — más patterns, y potencialmente infracciones nuevas que oXygen
+también reportaría. Los patterns cosechados que quedan sin reglas
+utilizables (vacíos o abstractos) se descartan, de ahí que la cifra de
+`[esquema]` pueda ser menor que la de `[cosecha]`.
+
 La ruta `-r` funciona igualmente con el `.rng` **propio**: un único
 artefacto alimenta entonces ambas capas (estructura con Jing, reglas con el
 runner), eliminando el riesgo de divergencia entre un `.rng` y un `.sch`
@@ -239,6 +277,7 @@ oXygen, sin topes y con salida procesable.
 | `El ODD X no contiene Schematron embebido` (código 3) | ODD de personalización sin compilar (p. ej. `tei_all.odd`) | Usar `-r` sobre su RNG generado, o compilar con `odd2odd` (§7). Saxon imprime antes su propio error `XTMM9000`: es el mismo diagnóstico en crudo |
 | `El RelaxNG X no contiene anotaciones Schematron` (código 3) | RNG generado sin reglas embebidas | Regenerarlo desde el ODD con la cadena estándar, o usar `-o`/`-s` |
 | `[aviso] sch:value-of en mensajes...` / `...elementos ajenos (sqf)...` | Schematron de las Guidelines (§7) | Informativo; los veredictos no se ven afectados |
+| `[aviso] elementos ajenos a Schematron ignorados (p. ej. report de http://www.tei-c.org/ns/1.0)` | Un `assert`/`report` quedó en namespace TEI en vez de Schematron — en el ODD propio significa una regla **nunca aplicada** por ninguna ruta | Localizarlo (`python3 -c "from lxml import etree; t=etree.parse('X.rng'); [print(e.sourceline, ' '.join((e.text or '').split())[:70]) for e in t.iter('{http://www.tei-c.org/ns/1.0}report')]"`) y corregir el namespace en la fuente |
 | Recuentos distintos de los de oXygen | Tope de highlights de oXygen, o `.rng` desactualizado en oXygen | Subir el tope (Options → Preferences → Editor → Document Checking) y regenerar el `.rng`; la cifra del script es la exacta |
 
 ## 10. Historial de diseño
@@ -259,5 +298,3 @@ Decisiones que conviene no re-litigar sin releer la historia del proyecto:
 - **Un pattern por constraintSpec**: heredado de la extracción TEI; hace
   estructuralmente imposible el shadowing entre constraintSpecs que afectó
   a versiones antiguas del esquema.
-
-Copyright (c) 2026 Nicolas Vaughan (nivaca@fastmail.com)

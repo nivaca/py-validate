@@ -144,6 +144,9 @@ python3 validate.py -s smed-schema.sch ed_lat.xml || echo "pending issues"
 Covered — the exact subset the smed ODD uses:
 
 - `pattern`, `rule`, `assert`, `report`, `let`;
+- `current()` (an XSLT function used by the P5 Guidelines rules): translated
+  into a context-node binding (`let $VALIDATE_CTX := .`) with textual
+  substitution, which reproduces its Schematron semantics exactly;
 - **first-match shadowing within each pattern**: a node matched by an
   earlier rule of the same pattern is excluded from later ones, per the
   standard. (The TEI extraction emits one pattern per constraintSpec, which
@@ -210,6 +213,14 @@ approve any document. Two routes:
   and P5's Schematron adds only a few dozen co-constraints — here the
   runner is the side dish, not the main course.
 
+A note on counts: an ODD-generated `.rng` embeds, besides your own rules,
+the Guidelines' Schematron for every included module (e.g. "Abstract model
+violation: Lines may not contain hi", P5's rule on `tei:l`). The `-r` route
+therefore validates a **superset** of the `-o` route — more patterns, and
+potentially new violations that oXygen would report as well. Harvested
+patterns left without usable rules (empty or abstract) are dropped, which
+is why the `[esquema]` figure can be lower than the `[cosecha]` one.
+
 The `-r` route works equally well with your **own** `.rng`: a single
 artifact then feeds both layers (structure with Jing, rules with the
 runner), removing the risk of a `.rng` and a `.sch` drifting apart through
@@ -241,6 +252,7 @@ without caps and with machine-processable output.
 | `El ODD X no contiene Schematron embebido` (exit 3) | Uncompiled customization ODD (e.g. `tei_all.odd`) | Use `-r` on its generated RNG, or compile with `odd2odd` (§7). Saxon prints its own `XTMM9000` error first: same diagnosis, raw form |
 | `El RelaxNG X no contiene anotaciones Schematron` (exit 3) | RNG generated without embedded rules | Regenerate it from the ODD with the standard chain, or use `-o`/`-s` |
 | `[aviso] sch:value-of en mensajes...` / `...elementos ajenos (sqf)...` | Guidelines Schematron (§7) | Informational; verdicts are unaffected |
+| `[aviso] elementos ajenos a Schematron ignorados (p. ej. report de http://www.tei-c.org/ns/1.0)` | An `assert`/`report` ended up in the TEI namespace instead of Schematron's — in your own ODD this means a rule that was **never enforced** by any route | Locate it (`python3 -c "from lxml import etree; t=etree.parse('X.rng'); [print(e.sourceline, ' '.join((e.text or '').split())[:70]) for e in t.iter('{http://www.tei-c.org/ns/1.0}report')]"`) and fix the namespace at the source |
 | Counts differ from oXygen's | oXygen's highlights cap, or a stale `.rng` in oXygen | Raise the cap (Options → Preferences → Editor → Document Checking) and regenerate the `.rng`; the script's figure is the exact one |
 
 ## 10. Design history
@@ -263,5 +275,3 @@ Decisions best not re-litigated without rereading the project's history:
 - **One pattern per constraintSpec**: inherited from the TEI extraction; it
   makes the cross-constraintSpec shadowing that afflicted older versions of
   the schema structurally impossible.
-
-Copyright (c) 2026 Nicolas Vaughan (nivaca@fastmail.com)
