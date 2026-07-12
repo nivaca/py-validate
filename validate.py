@@ -204,6 +204,12 @@ def cargar_reglas(sch_path: Path):
 def con_lets(lets, expr):
     for name, value in reversed(lets):
         expr = f"let ${name} := ({value}) return ({expr})"
+    # current() es XSLT, no XPath: en Schematron refiere al nodo de contexto
+    # de la regla. Se liga en la posición más externa y se sustituye, lo que
+    # reproduce exactamente esa semántica (las Guidelines P5 lo usan).
+    if 'current()' in expr:
+        expr = re.sub(r'current\(\)', '$VALIDATE_CTX', expr)
+        expr = f"let $VALIDATE_CTX := . return ({expr})"
     return expr
 
 
