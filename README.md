@@ -213,6 +213,33 @@ approve any document. Two routes:
   and P5's Schematron adds only a few dozen co-constraints — here the
   runner is the side dish, not the main course.
 
+
+**Where to get `tei_all.rng`** (do not generate it: it is distributed
+precompiled, with the Guidelines' Schematron embedded):
+
+```sh
+# official TEI release (the most recent):
+curl -sLO https://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng
+# or the one shipped with your oXygen (same P5 version as your editor):
+#   $OXYGEN_HOME/frameworks/tei/xml/tei/custom/schema/relaxng/tei_all.rng
+```
+
+Pick **one** source and use it for both layers: mixing oXygen's `.rng` in
+Jing with tei-c.org's in the runner (or vice versa) can yield inter-layer
+discrepancies due to P5 version differences.
+
+**Complete two-layer recipe against the standard:**
+
+```sh
+jing tei_all.rng document.xml && python3 validate.py -r tei_all.rng document.xml
+```
+
+The `&&` stops at the first failing layer; after the runner, `$? -eq 1`
+unambiguously means "Schematron violations" (not an environment error,
+which is 3). The first run harvests to `tei_all.harvested.sch` (far more
+patterns than a project schema: tei_all includes every module); subsequent
+runs hit the cache.
+
 A note on counts: an ODD-generated `.rng` embeds, besides your own rules,
 the Guidelines' Schematron for every included module (e.g. "Abstract model
 violation: Lines may not contain hi", P5's rule on `tei:l`). The `-r` route
