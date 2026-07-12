@@ -139,8 +139,22 @@ def sch_desde_rng(rng: Path) -> Path:
     if not n_pat:
         morir(f"El RelaxNG {rng.name} no contiene anotaciones Schematron "
                  f"embebidas (¿fue generado sin ellas?).")
+    # Poda de declaraciones de namespace rancias arrastradas por deepcopy:
+    # sin esto, lxml puede serializar un elemento {ISO}x sin prefijo bajo una
+    # declaración heredada xmlns="TEI", corrompiendo el namespace en el
+    # viaje árbol -> bytes -> árbol (verificado con tei_all.rng).
+    etree.cleanup_namespaces(schema, top_nsmap={None: SCH_NS})
     etree.ElementTree(schema).write(str(out), encoding='utf-8',
                                     xml_declaration=True, pretty_print=True)
+    # Self-check: lo re-parseado debe contener exactamente lo cosechado.
+    chk = etree.parse(str(out))
+    chk_pat = len(chk.getroot().findall(S + 'pattern'))
+    chk_ns = len(chk.getroot().findall(S + 'ns'))
+    if (chk_pat, chk_ns) != (n_pat, n_ns):
+        morir(f"Self-check de cosecha fallido en {out.name}: cosechados "
+              f"{n_pat} patterns/{n_ns} ns, re-leídos {chk_pat}/{chk_ns}. "
+              f"Corrupción de namespaces en la serialización; no se valida "
+              f"contra un esquema mutilado.")
     print(f"[cosecha] {rng.name} -> {out.name} "
           f"({n_pat} patterns, {n_ns} ns)", file=sys.stderr)
     return out
@@ -217,7 +231,11 @@ def con_lets(lets, expr):
 
 def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
     exigir_archivo(doc_path, 'el documento')
-    lx = etree.parse(str(doc_path))          # para números de línea
+    try:
+        lx = etree.parse(str(doc_path))      # para números de línea
+    except etree.XMLSyntaxError as e:
+        morir(f"El documento {doc_path.name} no está bien formado: {e}. "
+              f"Corrígelo antes de validar (xmllint --noout lo localiza).")
     xp = proc.new_xpath_processor()
     for p, u in nss.items():
         xp.declare_namespace(p, u)
