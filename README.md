@@ -96,6 +96,11 @@ python3 validate.py -r tei_all.rng -v document.xml
 # One artifact for both layers: structure with Jing, rules with -r
 jing smed-schema.rng ed_lat.xml && python3 validate.py -r smed-schema.rng ed_lat.xml
 
+# Or with the two-layer wrapper (ALWAYS runs both layers, no short-circuit,
+# with a composite verdict: 0 clean, 1 RelaxNG, 2 Schematron, 3 both, 4 environment;
+# falls back to lxml's RelaxNG when jing is not installed):
+./validate-all.sh -v smed-schema.rng ed_lat.xml
+
 # In a Makefile or pre-commit hook (non-zero exit code on violations)
 python3 validate.py -s smed-schema.sch ed_lat.xml || echo "pending issues"
 ```
@@ -113,8 +118,10 @@ python3 validate.py -s smed-schema.sch ed_lat.xml || echo "pending issues"
 
 - **Extraction cache**: with `-o`, the `.sch` is written next to the ODD
   (same name, `.sch` extension); with `-r`, next to the RNG
-  (`.harvested.sch` extension). They are regenerated only when the source's
-  mtime is newer. The `[caché] ... está al día` message indicates a cache
+  (`.harvested.sch` extension). They are regenerated when the mtime of the source **or of the
+  script itself** is newer — updating `validate.py` automatically
+  invalidates all derivatives, so a fixed generator never coexists with
+  derivatives produced by the defective version. The `[caché] ... está al día` message indicates a cache
   hit. To force regeneration: `touch` the source or delete the derivative.
 - **Namespace prefixes**: read from the `<ns>` elements of the `.sch`
   itself (currently only `tei:`). Nothing to configure by hand.
@@ -134,7 +141,11 @@ python3 validate.py -s smed-schema.sch ed_lat.xml || echo "pending issues"
    (`//(context)` for relative contexts; absolute ones as-is) and each test
    is evaluated as an *effective boolean value* in XPath 3.1. `<let>`
    elements are translated to the native `let $x := (...) return (...)`.
-4. **Report**: aggregate counts per rule message; with `-v`, each offender
+4. **Harvest self-check** (`-r` only): the freshly written
+   `.harvested.sch` is re-parsed and its counts compared with what was
+   harvested; on mismatch (serialization corruption) the script exits with
+   code 3 instead of validating against a mutilated schema.
+5. **Report**: aggregate counts per rule message; with `-v`, each offender
    is resolved to a physical line and `xml:id` via `fn:path()` (Saxon) →
    conversion of the `Q{uri}` notation to prefixes → node lookup with lxml
    (`sourceline` + nearest ancestor bearing `@xml:id`).
@@ -279,7 +290,7 @@ without caps and with machine-processable output.
 | `El ODD X no contiene Schematron embebido` (exit 3) | Uncompiled customization ODD (e.g. `tei_all.odd`) | Use `-r` on its generated RNG, or compile with `odd2odd` (§7). Saxon prints its own `XTMM9000` error first: same diagnosis, raw form |
 | `El RelaxNG X no contiene anotaciones Schematron` (exit 3) | RNG generated without embedded rules | Regenerate it from the ODD with the standard chain, or use `-o`/`-s` |
 | `[aviso] sch:value-of en mensajes...` / `...elementos ajenos (sqf)...` | Guidelines Schematron (§7) | Informational; verdicts are unaffected |
-| `[aviso] elementos ajenos a Schematron ignorados (p. ej. report de http://www.tei-c.org/ns/1.0)` | An `assert`/`report` ended up in the TEI namespace instead of Schematron's — in your own ODD this means a rule that was **never enforced** by any route | Locate it (`python3 -c "from lxml import etree; t=etree.parse('X.rng'); [print(e.sourceline, ' '.join((e.text or '').split())[:70]) for e in t.iter('{http://www.tei-c.org/ns/1.0}report')]"`) and fix the namespace at the source |
+| `[aviso] elementos ajenos a Schematron ignorados (p. ej. ... de http://www.tei-c.org/ns/1.0)` with script versions before 2026-07-12, or `Self-check de cosecha fallido` | Historical harvester bug: lxml serialized with stale namespace declarations and the `.harvested.sch` came out corrupted (lost patterns/rules, empty prefixes, `Namespace prefix 'tei' has not been declared`) | Update the script (≥ 2026-07-12, with `cleanup_namespaces` + self-check) and delete existing `.harvested.sch` files; the dual-mtime cache handles this automatically from now on |
 | Counts differ from oXygen's | oXygen's highlights cap, or a stale `.rng` in oXygen | Raise the cap (Options → Preferences → Editor → Document Checking) and regenerate the `.rng`; the script's figure is the exact one |
 
 ## 10. Design history

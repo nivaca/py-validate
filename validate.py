@@ -84,7 +84,10 @@ def extraer_sch(odd: Path, proc: PySaxonProcessor) -> Path:
     """ODD -> .sch con extract-isosch.xsl, cacheado por mtime."""
     exigir_archivo(odd, 'el ODD')
     sch = odd.with_suffix('.sch')
-    if sch.exists() and sch.stat().st_mtime >= odd.stat().st_mtime:
+    # La caché se invalida si cambia la fuente O el propio script (un
+    # generador corregido debe regenerar sus derivados; episodio 2026-07-12).
+    frescura = max(odd.stat().st_mtime, Path(__file__).stat().st_mtime)
+    if sch.exists() and sch.stat().st_mtime >= frescura:
         print(f"[caché] {sch.name} está al día", file=sys.stderr)
         return sch
     xsl = HERE / 'odds' / 'extract-isosch.xsl'
@@ -116,7 +119,8 @@ def sch_desde_rng(rng: Path) -> Path:
     un ODD, deduplicados, a un .sch autónomo. Cacheado por mtime."""
     exigir_archivo(rng, 'el RelaxNG')
     out = rng.with_suffix('.harvested.sch')
-    if out.exists() and out.stat().st_mtime >= rng.stat().st_mtime:
+    frescura = max(rng.stat().st_mtime, Path(__file__).stat().st_mtime)
+    if out.exists() and out.stat().st_mtime >= frescura:
         print(f"[caché] {out.name} está al día", file=sys.stderr)
         return out
     t = etree.parse(str(rng))
