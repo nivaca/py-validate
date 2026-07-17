@@ -1,5 +1,7 @@
 # validate.py — Validación Schematron desde el terminal
 
+**Versión 1.2** (`validate.py --version`)
+
 Validador de la capa Schematron del proyecto SMTrad. Extrae las reglas ISO
 Schematron embebidas en el ODD (`smed-schema.xml`) y las ejecuta contra uno o
 más documentos TEI con Saxon (XPath 3.1), produciendo un informe completo —
@@ -63,8 +65,12 @@ desde cualquier sitio.
 ## 3. Uso
 
 ```
-python3 validate.py (-o ODD | -s SCH | -r RNG) [-v] [--max N] DOC.xml [...]
+python3 validate.py [-o ODD | -s SCH | -r RNG] [-v] [--max N] [--refresh] DOC.xml [...]
 ```
+
+Desde la v1.2, los flags de esquema son **opcionales**: sin ellos, el
+esquema se **autodetecta** de las PIs `<?xml-model?>` del primer documento
+(§3.1).
 
 | Opción | Efecto |
 |---|---|
@@ -74,8 +80,35 @@ python3 validate.py (-o ODD | -s SCH | -r RNG) [-v] [--max N] DOC.xml [...]
 | `-v, --verbose` | Listado detallado: línea, `xml:id`, mensaje por infractor |
 | `--max N` | Máximo de infractores en el detalle (defecto 50). Si hay más, el script **dice cuántos quedaron fuera** — nunca trunca en silencio |
 
-Las tres fuentes de reglas son mutuamente excluyentes y exactamente una es
-obligatoria.
+| `--refresh` | Con autodetección: volver a descargar un esquema remoto aunque esté en caché |
+
+Las tres fuentes explícitas son mutuamente excluyentes; si no se da ninguna,
+opera la autodetección.
+
+### 3.1 Autodetección por `<?xml-model?>` (v1.2)
+
+Sin `-o/-s/-r`, el script lee las PIs `xml-model` del primer documento y:
+
+1. **Elige el href**: preferentemente el de `schematypens` Schematron; en su
+   defecto, el de RelaxNG (se cosechará su Schematron embebido). El patrón
+   habitual — el mismo `.rng` asociado dos veces, una por capa — converge en
+   una sola fuente.
+2. **Resuelve la ruta**: relativa *al documento* (no al directorio de
+   trabajo), absoluta, o URL http(s) — que se descarga a `.schema-cache/`
+   junto al script (nombre = hash de la URL + nombre original) y se reutiliza
+   en corridas siguientes; `--refresh` fuerza la redescarga. Nota: a
+   diferencia de la caché por mtime, la de URL no detecta actualizaciones
+   remotas — tras una release nueva del esquema, usa `--refresh`.
+3. **Clasifica por contenido real**, no por extensión ni por lo declarado:
+   raíz RelaxNG → cosecha; raíz ISO Schematron → uso directo; raíz TEI
+   (ODD) → extracción. Con varios documentos, el esquema se detecta del
+   primero (con aviso). Sin ninguna PI y sin flags: código 3 con mensaje.
+
+Con ello, la invocación mínima es simplemente:
+
+```sh
+python3 validate.py documento.xml
+```
 
 ### Recetas
 
@@ -309,3 +342,11 @@ Decisiones que conviene no re-litigar sin releer la historia del proyecto:
 - **Un pattern por constraintSpec**: heredado de la extracción TEI; hace
   estructuralmente imposible el shadowing entre constraintSpecs que afectó
   a versiones antiguas del esquema.
+
+## 11. Historial de versiones
+
+| Versión | Fecha | Cambios |
+|---|---|---|
+| **1.2** | 2026-07-17 | Autodetección de esquema por PI `<?xml-model?>` con descarga y caché de esquemas remotos (`.schema-cache/`, `--refresh`); clasificación del esquema por contenido (RNG/Schematron/ODD); flags de fuente ahora opcionales; `--version` |
+| 1.1 | 2026-07-12 | Ruta `-r` (cosecha del Schematron embebido en RelaxNG, con deduplicación); corrección del bug de serialización de namespaces en la cosecha (`cleanup_namespaces`) y **self-check post-cosecha**; soporte de `current()` (reglas P5); guardián de documentos mal formados; guardianes anti-esquema-vacío (ODD y RNG); código de salida 3 para errores de entorno; caché por **doble mtime** (fuente + script); wrapper bicapa `validate-all.sh` |
+| 1.0 | 2026-07-10 | Versión inicial: extracción ODD→`.sch` (`-o`) con caché por mtime, `.sch` directo (`-s`), runner Schematron sobre Saxon/XPath 3.1 (pattern/rule/assert/report/let, first-match shadowing), informe sin tope oculto, resolución de infractores a línea + `xml:id`, códigos de salida 0/1/2 |

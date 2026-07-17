@@ -42,15 +42,20 @@ Requisitos: pip install saxonche lxml
 """
 
 import argparse
+import hashlib
 import re
 import sys
 import time
+import urllib.request
+from urllib.parse import urlparse
 from collections import Counter
 from copy import deepcopy
 from pathlib import Path
 
 from lxml import etree
 from saxonche import PySaxonProcessor
+
+__version__ = "1.2"
 
 SCH_NS = 'http://purl.oclc.org/dsdl/schematron'
 S = f'{{{SCH_NS}}}'
@@ -162,6 +167,87 @@ def sch_desde_rng(rng: Path) -> Path:
     print(f"[cosecha] {rng.name} -> {out.name} "
           f"({n_pat} patterns, {n_ns} ns)", file=sys.stderr)
     return out
+
+
+# ----------------------------------------------------- autodetección
+
+RELAXNG_NS = 'http://relaxng.org/ns/structure/1.0'
+TEI_NS = 'http://www.tei-c.org/ns/1.0'
+
+
+def obtener_recurso(href, base_dir: Path, refresh=False) -> Path:
+    """Resuelve el href de una PI xml-model: ruta local (relativa al
+    documento) o URL http(s), que se descarga a una caché junto al script
+    (.schema-cache/, nombre = hash de la URL + nombre original)."""
+    if re.match(r'https?://', href):
+        cache = HERE / '.schema-cache'
+        cache.mkdir(exist_ok=True)
+        nombre = (hashlib.sha256(href.encode()).hexdigest()[:12]
+                  + '-' + (Path(urlparse(href).path).name or 'schema'))
+        dest = cache / nombre
+        if dest.exists() and not refresh:
+            print(f"[caché] {href} ya descargado -> {dest.name} "
+                  f"(--refresh para forzar)", file=sys.stderr)
+            return dest
+        print(f"[descarga] {href}", file=sys.stderr)
+        try:
+            with urllib.request.urlopen(href, timeout=60) as r:
+                datos = r.read()
+        except Exception as e:
+            morir(f"No pude descargar el esquema {href}: {e}")
+        dest.write_bytes(datos)
+        return dest
+    p = (base_dir / href).resolve() if not Path(href).is_absolute() else Path(href)
+    exigir_archivo(p, f"el esquema referido por xml-model ({href})")
+    return p
+
+
+def clasificar_esquema(path: Path) -> str:
+    """Clasifica por CONTENIDO real (no por extensión): 'rng' | 'sch' | 'odd'."""
+    try:
+        root = etree.parse(str(path)).getroot()
+    except etree.XMLSyntaxError as e:
+        morir(f"El esquema {path.name} no es XML bien formado: {e}")
+    ns = etree.QName(root).namespace
+    if ns == RELAXNG_NS:
+        return 'rng'
+    if ns == SCH_NS:
+        return 'sch'
+    if ns == TEI_NS:
+        return 'odd'
+    morir(f"No reconozco el esquema {path.name} (raíz en namespace {ns}); "
+          f"indícalo explícitamente con -o, -s o -r.")
+
+
+def detectar_esquema(doc_path: Path, refresh=False):
+    """Lee las PIs <?xml-model?> del documento y devuelve (ruta, tipo).
+    Preferencia: una PI con schematypens de Schematron; en su defecto, la
+    de RelaxNG (cuyo Schematron embebido se cosechará); hrefs duplicados
+    (el patrón habitual: el mismo .rng asociado dos veces, una por capa)
+    cuentan como una sola fuente. La clasificación final es por contenido,
+    no por extensión ni por lo que la PI declare."""
+    exigir_archivo(doc_path, 'el documento')
+    try:
+        tree = etree.parse(str(doc_path))
+    except etree.XMLSyntaxError as e:
+        morir(f"El documento {doc_path.name} no está bien formado: {e}")
+    entradas = []
+    for pi in tree.xpath('//processing-instruction("xml-model")'):
+        href = pi.get('href')
+        if href:
+            entradas.append((href, pi.get('schematypens') or ''))
+    if not entradas:
+        morir(f"{doc_path.name} no lleva ninguna PI <?xml-model?> con href; "
+              f"indica el esquema con -o, -s o -r.")
+    hrefs_sch = [h for h, t in entradas if t == SCH_NS]
+    hrefs_rng = [h for h, t in entradas if t == RELAXNG_NS]
+    href = (hrefs_sch or hrefs_rng or [entradas[0][0]])[0]
+    print(f"[xml-model] esquema detectado: {href}", file=sys.stderr)
+    local = obtener_recurso(href, doc_path.parent, refresh)
+    tipo = clasificar_esquema(local)
+    print(f"[xml-model] clasificado por contenido como: {tipo}",
+          file=sys.stderr)
+    return local, tipo
 
 
 # ---------------------------------------------------------------- esquema
@@ -325,8 +411,10 @@ def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
 def main():
     ap = argparse.ArgumentParser(
         description='Validación Schematron de documentos TEI desde el terminal')
+    ap.add_argument('--version', action='version',
+                    version=f'%(prog)s {__version__}')
     ap.add_argument('docs', nargs='+', type=Path)
-    g = ap.add_mutually_exclusive_group(required=True)
+    g = ap.add_mutually_exclusive_group(required=False)
     g.add_argument('-o', '--odd', type=Path,
                    help='ODD con Schematron embebido del que extraer el .sch')
     g.add_argument('-s', '--sch', type=Path, help='.sch ya extraído')
@@ -337,6 +425,9 @@ def main():
     ap.add_argument('--max', type=int, default=50,
                     help='máximo de infracciones detalladas (def. 50; '
                          'el recuento total nunca se trunca)')
+    ap.add_argument('--refresh', action='store_true',
+                    help='con autodetección por xml-model: volver a '
+                         'descargar el esquema aunque esté en caché')
     args = ap.parse_args()
 
     total = 0
@@ -345,8 +436,19 @@ def main():
             sch = extraer_sch(args.odd, proc)
         elif args.rng:
             sch = sch_desde_rng(args.rng)
-        else:
+        elif args.sch:
             sch = args.sch
+        else:
+            local, tipo = detectar_esquema(args.docs[0], args.refresh)
+            if len(args.docs) > 1:
+                print("[aviso] esquema detectado del PRIMER documento; se "
+                      "aplica a todos los de esta invocación", file=sys.stderr)
+            if tipo == 'odd':
+                sch = extraer_sch(local, proc)
+            elif tipo == 'rng':
+                sch = sch_desde_rng(local)
+            else:
+                sch = local
         nss, patterns = cargar_reglas(sch)
         n_reglas = sum(len(r) for _, r in patterns)
         print(f"[esquema] {len(patterns)} patterns, {n_reglas} reglas, "
