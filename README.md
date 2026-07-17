@@ -136,6 +136,11 @@ jing smed-schema.rng ed_lat.xml && python3 validate.py -r smed-schema.rng ed_lat
 # falls back to lxml's RelaxNG when jing is not installed):
 ./validate-all.sh -v smed-schema.rng ed_lat.xml
 
+# Wrapper in auto mode (v1.2): without a schema argument, it detects the
+# schema from the document's xml-model PI (classifying the first argument
+# by content, not by extension) and shares validate.py's download cache:
+./validate-all.sh -v document.xml
+
 # In a Makefile or pre-commit hook (non-zero exit code on violations)
 python3 validate.py -s smed-schema.sch ed_lat.xml || echo "pending issues"
 ```
@@ -353,6 +358,6 @@ Decisions best not re-litigated without rereading the project's history:
 
 | Version | Date | Changes |
 |---|---|---|
-| **1.2** | 2026-07-17 | Schema auto-detection from `<?xml-model?>` PIs with download and caching of remote schemas (`.schema-cache/`, `--refresh`); content-based schema classification (RNG/Schematron/ODD); source flags now optional; `--version` |
+| **1.2** | 2026-07-17 | Schema auto-detection from `<?xml-model?>` PIs with download and caching of remote schemas (`.schema-cache/`, `--refresh`); content-based schema classification (RNG/Schematron/ODD); source flags now optional; `--version`. Matching `validate-all.sh`: auto mode without a schema argument, reusing validate.py's resolution and cache |
 | 1.1 | 2026-07-12 | `-r` route (harvesting of RelaxNG-embedded Schematron, with deduplication); fix for the namespace-serialization bug in harvesting (`cleanup_namespaces`) plus **post-harvest self-check**; `current()` support (P5 rules); malformed-document guard; empty-schema guards (ODD and RNG); exit code 3 for environment errors; **dual-mtime** cache (source + script); two-layer wrapper `validate-all.sh` |
 | 1.0 | 2026-07-10 | Initial release: ODD→`.sch` extraction (`-o`) with mtime cache, direct `.sch` (`-s`), Schematron runner on Saxon/XPath 3.1 (pattern/rule/assert/report/let, first-match shadowing), report without hidden caps, offender resolution to line + `xml:id`, exit codes 0/1/2 |

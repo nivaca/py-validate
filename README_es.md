@@ -134,6 +134,11 @@ jing smed-schema.rng ed_lat.xml && python3 validate.py -r smed-schema.rng ed_lat
 # si jing no está instalado usa el RelaxNG de lxml como respaldo):
 ./validate-all.sh -v smed-schema.rng ed_lat.xml
 
+# Wrapper en modo auto (v1.2): sin esquema, lo detecta de la PI xml-model
+# del documento (clasificando el primer argumento por contenido, no por
+# extensión) y comparte la caché de descargas de validate.py:
+./validate-all.sh -v documento.xml
+
 # En un Makefile o hook pre-commit (código de salida ≠ 0 si hay infracciones)
 python3 validate.py -s smed-schema.sch ed_lat.xml || echo "hay pendientes"
 ```
@@ -343,10 +348,10 @@ Decisiones que conviene no re-litigar sin releer la historia del proyecto:
   estructuralmente imposible el shadowing entre constraintSpecs que afectó
   a versiones antiguas del esquema.
 
-## 11. Historial de versiones
+## 11. Version history
 
 | Versión | Fecha | Cambios |
 |---|---|---|
-| **1.2** | 2026-07-17 | Autodetección de esquema por PI `<?xml-model?>` con descarga y caché de esquemas remotos (`.schema-cache/`, `--refresh`); clasificación del esquema por contenido (RNG/Schematron/ODD); flags de fuente ahora opcionales; `--version` |
+| **1.2** | 2026-07-17 | Autodetección de esquema por PI `<?xml-model?>` con descarga y caché de esquemas remotos (`.schema-cache/`, `--refresh`); clasificación del esquema por contenido (RNG/Schematron/ODD); flags de fuente ahora opcionales; `--version`. `validate-all.sh` a juego: modo auto sin argumento de esquema, reutilizando la resolución y caché de validate.py |
 | 1.1 | 2026-07-12 | Ruta `-r` (cosecha del Schematron embebido en RelaxNG, con deduplicación); corrección del bug de serialización de namespaces en la cosecha (`cleanup_namespaces`) y **self-check post-cosecha**; soporte de `current()` (reglas P5); guardián de documentos mal formados; guardianes anti-esquema-vacío (ODD y RNG); código de salida 3 para errores de entorno; caché por **doble mtime** (fuente + script); wrapper bicapa `validate-all.sh` |
 | 1.0 | 2026-07-10 | Versión inicial: extracción ODD→`.sch` (`-o`) con caché por mtime, `.sch` directo (`-s`), runner Schematron sobre Saxon/XPath 3.1 (pattern/rule/assert/report/let, first-match shadowing), informe sin tope oculto, resolución de infractores a línea + `xml:id`, códigos de salida 0/1/2 |
