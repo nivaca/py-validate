@@ -1,6 +1,6 @@
 # validate.py — Validación Schematron desde el terminal
 
-**Versión 1.2** (`validate.py --version`)
+**Versión 1.3** (`validate.py --version`)
 
 Validador de la capa Schematron del proyecto SMTrad. Extrae las reglas ISO
 Schematron embebidas en el ODD (`smed-schema.xml`) y las ejecuta contra uno o
@@ -204,8 +204,7 @@ Cubierto — el subconjunto exacto que usa el ODD smed:
 
 No implementado — el script **avisa por stderr una vez por tipo** y
 continúa: `phase` (se ejecutan todos los patterns), patterns/reglas
-abstractos (se omiten), `diagnostics`, `xsl:key`, `sch:value-of` dentro de
-mensajes (el texto se aplana: mensaje sin el valor interpolado) y elementos
+abstractos (se omiten), `diagnostics`, `xsl:key`, y elementos
 de otros espacios de nombres como `sqf:fix` (Quick Fixes de oXygen, que no
 afectan a los veredictos). Con el ODD smed nada de esto aparece; con
 Schematron de las Guidelines (§7) verás los avisos de `value-of` y `sqf`.
@@ -352,6 +351,7 @@ Decisiones que conviene no re-litigar sin releer la historia del proyecto:
 
 | Versión | Fecha | Cambios |
 |---|---|---|
+| **1.3** | 2026-07-19 | `sch:value-of` en mensajes de assert/report se **interpola** (evaluado en el contexto del nodo infractor, con los `let` de la regla): el detalle `-v` muestra p. ej. las siglas exactas faltantes/foráneas; el recuento agregado sigue agrupando por plantilla estática |
 | **1.2** | 2026-07-17 | Autodetección de esquema por PI `<?xml-model?>` con descarga y caché de esquemas remotos (`.schema-cache/`, `--refresh`); clasificación del esquema por contenido (RNG/Schematron/ODD); flags de fuente ahora opcionales; `--version`. `validate-all.sh` a juego: modo auto sin argumento de esquema, reutilizando la resolución y caché de validate.py |
 | 1.1 | 2026-07-12 | Ruta `-r` (cosecha del Schematron embebido en RelaxNG, con deduplicación); corrección del bug de serialización de namespaces en la cosecha (`cleanup_namespaces`) y **self-check post-cosecha**; soporte de `current()` (reglas P5); guardián de documentos mal formados; guardianes anti-esquema-vacío (ODD y RNG); código de salida 3 para errores de entorno; caché por **doble mtime** (fuente + script); wrapper bicapa `validate-all.sh` |
 | 1.0 | 2026-07-10 | Versión inicial: extracción ODD→`.sch` (`-o`) con caché por mtime, `.sch` directo (`-s`), runner Schematron sobre Saxon/XPath 3.1 (pattern/rule/assert/report/let, first-match shadowing), informe sin tope oculto, resolución de infractores a línea + `xml:id`, códigos de salida 0/1/2 |

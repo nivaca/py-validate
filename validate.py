@@ -55,7 +55,7 @@ from pathlib import Path
 from lxml import etree
 from saxonche import PySaxonProcessor
 
-__version__ = "1.2"
+__version__ = "1.3"
 
 SCH_NS = 'http://purl.oclc.org/dsdl/schematron'
 S = f'{{{SCH_NS}}}'
@@ -286,12 +286,22 @@ def cargar_reglas(sch_path: Path):
                                    f'no afectan a los veredictos')
                     continue
                 if qn.localname in ('assert', 'report'):
-                    if t.find(S + 'value-of') is not None:
-                        avisar_una_vez('value-of',
-                                       'sch:value-of en mensajes: se aplana '
-                                       '(mensaje sin valor interpolado)')
-                    msg = ' '.join(' '.join(t.itertext()).split())
-                    tests.append((qn.localname, t.get('test'), msg))
+                    segs = []
+                    if t.text and t.text.strip():
+                        segs.append(('txt', ' '.join(t.text.split())))
+                    for hijo in t:
+                        if isinstance(hijo.tag, str):
+                            hq = etree.QName(hijo)
+                            if hq.namespace == SCH_NS and hq.localname == 'value-of':
+                                segs.append(('exp', hijo.get('select')))
+                            else:
+                                txt = ' '.join(''.join(hijo.itertext()).split())
+                                if txt:
+                                    segs.append(('txt', txt))
+                        if getattr(hijo, 'tail', None) and hijo.tail.strip():
+                            segs.append(('txt', ' '.join(hijo.tail.split())))
+                    msg = ' '.join(s for k, s in segs if k == 'txt')
+                    tests.append((qn.localname, t.get('test'), msg, segs))
                 elif qn.localname != 'let':
                     avisar_una_vez(f'el:{qn.localname}',
                                    f'elemento Schematron no implementado: '
@@ -376,7 +386,7 @@ def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
                 if path_id in ya_casados:
                     continue
                 ya_casados.add(path_id)
-                for tipo, test, msg in tests:
+                for tipo, test, msg, segs in tests:
                     xp.set_context(xdm_item=node)
                     try:
                         val = xp.effective_boolean_value(con_lets(lets, test))
@@ -390,17 +400,32 @@ def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
                         continue
                     if (tipo == 'assert' and not val) or \
                        (tipo == 'report' and val):
-                        infracciones.append((path_id, msg))
+                        interp = msg
+                        if any(k == 'exp' for k, _ in segs):
+                            try:
+                                partes = []
+                                for k, v in segs:
+                                    if k == 'txt':
+                                        partes.append(v)
+                                    else:
+                                        xp.set_context(xdm_item=node)
+                                        r = xp.evaluate(con_lets(lets, v))
+                                        xp.set_context(xdm_item=doc)
+                                        partes.append(str(r) if r is not None else '')
+                                interp = ' '.join(p for p in partes if p)
+                            except Exception:
+                                xp.set_context(xdm_item=doc)
+                        infracciones.append((path_id, msg, interp))
 
     print(f"\n== {doc_path.name} — {len(infracciones)} infracciones "
           f"({time.time()-t0:.1f}s) ==")
-    for msg, n in Counter(m for _, m in infracciones).most_common():
+    for msg, n in Counter(m for _, m, _ in infracciones).most_common():
         print(f"{n:5d}  {msg[:100]}")
     if verbose and infracciones:
         print(f"\n-- detalle (primeras {min(max_list, len(infracciones))}) --")
-        for path_q, msg in infracciones[:max_list]:
+        for path_q, msg, interp in infracciones[:max_list]:
             line, xid = linea_e_id(path_q)
-            print(f"  l.{line or '?':>6}  [{xid}]  {msg[:90]}")
+            print(f"  l.{line or '?':>6}  [{xid}]  {interp[:140]}")
         if len(infracciones) > max_list:
             print(f"  ... y {len(infracciones)-max_list} más (sube --max)")
     return len(infracciones)

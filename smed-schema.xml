@@ -1,0 +1,1110 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_odds.rng" type="application/xml" schematypens="http://relaxng.org/ns/structure/1.0"?>
+<?xml-model href="http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_odds.rng" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<TEI xml:lang="en" xmlns="http://www.tei-c.org/ns/1.0" xmlns:rng="http://relaxng.org/ns/structure/1.0" >
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Schema for SMED</title>
+        <author xml:id="nivaca">Nicolas Vaughan</author>
+      </titleStmt>
+      <publicationStmt>
+        <authority>An SCTA and LombardPress Collaboration Project</authority>
+      </publicationStmt>
+      <sourceDesc>
+        <p>
+          This schema is based on the LombardPress Critical Edition Schema 
+          and LombardPress Critical Transcription Guidelines, 
+          created by Jeffrey C. Witt, Michael Stenskjær and
+          Nicolas Vaughan. See here:
+          <ref>https://community.scta.info/pages/lombardpress-schema-critical.html</ref></p>
+      </sourceDesc>
+    </fileDesc>
+    <revisionDesc status="draft">
+      <change who="#nivaca" when="2024-02-09" n="0.0.0-dev"></change>
+    </revisionDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <schemaSpec ident="smed" start="TEI"
+        source="http://www.tei-c.org/Vault/P5/3.1.0/xml/tei/odd/p5subset.xml">
+        
+        <!-- Core Module -->
+        <moduleRef key="core"/>
+        
+        
+        <elementSpec ident="pb" module="core" mode="change">
+          <attList>
+            <attDef ident="break" usage="opt" mode="change">
+              <valList type="closed" mode="add">
+                <valItem ident="yes">
+                  <gloss>yes</gloss>
+                  <desc>milestone breaks a word in two</desc>
+                </valItem>
+                <valItem ident="no">
+                  <gloss>no</gloss>
+                  <desc>milestone doen not break a word in two</desc>
+                </valItem>
+              </valList>
+            </attDef>
+          </attList>
+        </elementSpec>
+        
+        
+        <elementSpec ident="lb" module="core" mode="change">
+          <attList>
+            <attDef ident="break" usage="opt" mode="change">
+              <valList type="closed" mode="add">
+                <valItem ident="yes">
+                  <gloss>yes</gloss>
+                  <desc>milestone breaks a word in two</desc>
+                </valItem>
+                <valItem ident="no">
+                  <gloss>no</gloss>
+                  <desc>milestone doen not break a word in two</desc>
+                </valItem>
+              </valList>
+            </attDef>
+          </attList>
+        </elementSpec>
+        
+        
+        <elementSpec ident="q" module="core" mode="change">
+          <attList>
+            <attDef ident="who" usage="opt" mode="change">
+              <valList type="closed" mode="add">
+                <valItem ident="#Sal">
+                  <gloss>Sal</gloss>
+                  <desc>Salomon</desc>
+                </valItem>
+                <valItem ident="#Marc">
+                  <gloss>Marc</gloss>
+                  <desc>Marcolfus</desc>
+                </valItem>
+                <valItem ident="#Fus">
+                  <gloss>Fus</gloss>
+                  <desc>Fusada</desc>
+                </valItem>
+                <valItem ident="#al">
+                  <gloss>al</gloss>
+                  <desc>alii (otros hablantes)</desc>
+                </valItem>
+              </valList>
+            </attDef>
+          </attList>
+        </elementSpec>
+        
+        
+        
+        <elementSpec ident="title" module="core" mode="change">
+          <attList>
+            <attDef ident="type" usage="opt" mode="change">
+              <valList type="closed" mode="add">
+                <valItem ident="ms">
+                  <gloss>manuscript</gloss>
+                  <desc>Title of a manuscript</desc>
+                </valItem>
+                <valItem ident="ed">
+                  <gloss>edition</gloss>
+                  <desc>Title of a printed edition</desc>
+                </valItem>
+              </valList>
+            </attDef>
+            <attDef ident="rend" usage="opt" mode="change">
+              <valList type="closed" mode="add">
+                <valItem ident="upshape">
+                  <gloss>upshape</gloss>
+                  <desc>
+                    Title rendered in upshape font, 
+                    not in italics
+                  </desc>
+                </valItem>
+              </valList>
+            </attDef>
+          </attList>
+        </elementSpec>
+        
+        
+        <!-- Begin modifications to del element -->
+        <elementSpec ident="del" module="core" mode="change">
+          <attList>
+            <attDef ident="rend" usage="rec" mode="change">
+              <valList type="semi" mode="add">
+                <valItem ident="strikethrough">
+                  <gloss>strikethrough</gloss>
+                  <desc>A deletion indicated by a line through the center of the text</desc>
+                </valItem>
+                <valItem ident="expunctuation">
+                  <gloss>expunctuated</gloss>
+                  <desc>A deletion indicated by dots underneath the text</desc>
+                </valItem>
+                <valItem ident="blackout">
+                  <gloss>black out</gloss>
+                  <desc>A deletion indicated by blacking out the word or segment</desc>
+                </valItem>
+                <valItem ident="underline">
+                  <gloss>underline</gloss>
+                  <desc>A deletion indicated by underling the word or segment</desc>
+                </valItem>
+                <valItem ident="erasure">
+                  <gloss>erasure</gloss>
+                  <desc>Deletion by erasure</desc>
+                </valItem>
+              </valList>
+            </attDef>
+          </attList>
+        </elementSpec>
+        <!-- end del element -->
+        
+        <!-- begin add element -->
+        <elementSpec ident="add" module="core" mode="change">
+          <attList>
+            <attDef ident="place" usage="rec" mode="change">
+              <valList type="semi" mode="add">
+                <valItem ident="margin">
+                  <gloss>margin</gloss>
+                  <desc>A generic place locator for an addition appearing in some margin</desc>
+                </valItem>
+                <valItem ident="margin-right">
+                  <gloss>margin-right</gloss>
+                  <desc>Indicates an addition in the margin to the right of the text in question</desc>
+                </valItem>
+                <valItem ident="margin-left">
+                  <gloss>margin-left</gloss>
+                  <desc>Indicates an addition in the margin to the left of the text in question</desc>
+                </valItem>
+                <valItem ident="margin-above">
+                  <gloss>margin-above</gloss>
+                  <desc>Indicates an addition in the margin to the above of the text in question</desc>
+                </valItem>
+                <valItem ident="margin-below">
+                  <gloss>margin-below</gloss>
+                  <desc>Indicates an addition in the margin to the below of the text in question</desc>
+                </valItem>
+                <valItem ident="above-line">
+                  <gloss>above-line</gloss>
+                  <desc>Indicates an addition inserted above the line in question</desc>
+                </valItem>
+                <valItem ident="below-line">
+                  <gloss>below-line</gloss>
+                  <desc>Indicates an addition inserted below the line in question</desc>
+                </valItem>
+                <valItem ident="in-line">
+                  <gloss>in-line</gloss>
+                  <desc>Indicates an addition inserted in the line</desc>
+                </valItem>
+              </valList>
+            </attDef>
+          </attList>
+        </elementSpec>
+        <!-- end add element -->
+        
+        <!-- ==================================================================
+             XPATH BINDING DOCTRINE (2026-07-10): this schema assumes an
+             XPath 2.0-capable Schematron engine (oXygen / Saxon). Rules using
+             matches(), tokenize(), some/every ... satisfies, if/then/else
+             depend on it. If validation ever goes silent, FIRST check:
+             (1) the validation-highlights cap (Options > Preferences > Editor
+                 > Document Checking; errors beyond the cap are dropped
+                 silently); (2) first-match shadowing (one rule per context);
+             (3) structurally empty <rule> elements (invalid ISO Schematron:
+                 every rule needs at least one assert/report);
+             (4) the engine binding, via the canary below.
+             Canary test: uncomment, regenerate, validate; "XPATH2-OK" must
+             appear on every document. Re-comment afterwards.
+        <constraintSpec ident="xpath2-canary" scheme="schematron">
+          <desc>Temporary probe: fires iff the engine evaluates XPath 2.0</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI">
+              <report test="matches('canary','^can')">XPATH2-OK</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        ================================================================== -->
+
+        <!-- begin cit element rules -->
+        <constraintSpec ident="cit-must-have-quote-or-ref" scheme="schematron">
+          <desc>cit must contain quote or ref as a direct child</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:text/tei:body//tei:cit">
+              <report test="not(./tei:quote) and not(./tei:ref)">cit must contain quote or ref as a direct child</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        
+        <!-- RULES FOR MILESTONE ELEMENTS -->
+        <constraintSpec ident="milestones-must-have-ed-attr" scheme="schematron">
+          <desc>Milestones must have ed or edRef attribute</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:lb|tei:cb|tei:pb">
+              <report test="not(./@ed or ./@edRef)">Milestones must have
+                ed or edRef attribute</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="cb-and-pb-must-have-n-attr" scheme="schematron">
+          <desc>cb and pb must have n attribute</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:cb|tei:pb">
+              <report test="not(./@n)">cb and pb must have n attribute</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        
+        <moduleRef key="tei"/>
+        <!-- header module -->
+        <moduleRef key="header"/>
+        <!-- header rules -->
+        <!-- titleStmt rules -->
+        <constraintSpec ident="missing-author-rule" scheme="schematron">
+          <desc>An author must be stated. Either the author's name or anonymous should be stated</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:teiHeader[1]/tei:fileDesc[1]/tei:titleStmt[1]">
+              <report test="not(./tei:author)">An author must be stated. Either the author's name or anonymous should be stated</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <!-- editionStmt rules -->
+        <constraintSpec ident="edition-must-have-n-date-and-when" scheme="schematron">
+          <desc>EditionStmt edition must have an n attribute, a date child, and that date must have a when attribute.
+            Note: previously split across three constraintSpecs ("missing-edition-n", "missing-edition-date",
+            "missing-edition-date-when-attribute") sharing the identical context
+            ".../editionStmt[1]/edition[1]", which caused first-match shadowing — only the first check
+            ("must have n attribute") ever fired; the other two were silently never evaluated. Consolidated below.</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:teiHeader[1]/tei:fileDesc[1]/tei:editionStmt[1]/tei:edition[1]">
+              <report test="not(./@n)">Edition element must indicate edition number with n attribute of the form x.x.x or x.x.x-dev</report>
+              <report test="./@n and not(matches(@n, '^\d+\.\d+\.\d+(-dev)?$'))">Edition n attribute must have the form x.x.x or x.x.x-dev</report>
+              <report test="not(./tei:date)">EditionStmt Edition must have an date element as child</report>
+              <report test="./tei:date and not(./tei:date/@when)">EditionStmt Edition Date must have a when attribute</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <!-- pub stmt rules -->
+        <constraintSpec ident="pubstmt-must-have-authority-and-availability" scheme="schematron">
+          <desc>publicationStmt must have an authority and an availability element as children, if p is not used.
+            Note: previously split across two constraintSpecs ("pubstmt-must-have-authority",
+            "pubstmt-must-have-availability") sharing the identical context
+            ".../publicationStmt[1][not(./tei:p)]", which caused first-match shadowing — only the
+            authority check ever fired; the availability check was silently never evaluated. Consolidated below.</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:teiHeader[1]/tei:fileDesc[1]/tei:publicationStmt[1][not(./tei:p)]">
+              <report test="not(./tei:authority)">publicationStmt must have an authority as child if p is not used</report>
+              <report test="not(./tei:availability)">publicationStmt must have an availability element as child if p is not used</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        
+        <!-- sourceDesc rules -->
+        <constraintSpec ident="src-desc-must-contain-listwit-or-listbibl" scheme="schematron">
+          <desc>Source description must contain either a listWit or listBibl</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:teiHeader[1]/tei:fileDesc[1]/tei:sourceDesc[1]">
+              <report test="not(./tei:listWit) and not(./tei:listBibl)">Source description must contain either a listWit or listBibl</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <!-- encodingDesc rules -->
+        <constraintSpec ident="teiheader-must-have-encoding-and-revision-desc" scheme="schematron">
+          <desc>teiHeader must contain both an encodingDesc and a revisionDesc.
+            Note: previously split across two constraintSpecs ("encoding-desc-must-be-present",
+            "revision-desc-must-be-present") sharing the identical context "/tei:TEI/tei:teiHeader[1]",
+            which caused first-match shadowing — only the encodingDesc check ever fired; the revisionDesc
+            check was silently never evaluated, despite the two constraintSpecs being physically far apart
+            in this file (separated by the sourceDesc and schemaRef rules). Consolidated below.</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:teiHeader[1]">
+              <report test="not(./tei:encodingDesc)">Encoding description must be present</report>
+              <report test="not(./tei:revisionDesc)">Revision description must be present</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="schema-ref-must-be-present" scheme="schematron">
+          <desc>SchemaRef must be present</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:teiHeader[1]/tei:encodingDesc[1]">
+              <report test="not(./tei:schemaRef)">SchemaRef must be present</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="schema-ref-must-have-n-attribute" scheme="schematron">
+          <desc>SchemaRef must have an n attribute indicating schema version followed</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:teiHeader[1]/tei:encodingDesc[1]/tei:schemaRef[1]">
+              <report test="not(./@n)">SchemaRef must have an n attribute indicating the schema version followed, e.g. "smed-1.0.0" </report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <!-- revisionDesc rules -->
+        <!-- "revision-desc-must-be-present" was merged into
+             "teiheader-must-have-encoding-and-revision-desc" above,
+             to fix the cross-constraintSpec context shadowing on /tei:TEI/tei:teiHeader[1] -->
+
+        <!-- Note: this rule is correct as written; the earlier "can't get this test to work" TODO
+             predated the shadowing fixes and the discovery of oXygen's validation-highlights cap,
+             either of which would have masked it. Retested 2026-07-10. -->
+        <constraintSpec ident="revision-desc-must-have-status" scheme="schematron">
+          <desc>Revision description must have a status</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:teiHeader[1]/tei:revisionDesc[1]">
+              <report test="not(./@status)">Revision description must have a status</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <!-- additional header rules should be added here -->
+        
+        
+        <!-- END HEADER RULES -->
+        
+        <!-- text structure module -->
+        <moduleRef key="textstructure"/>
+        <!-- rules for front -->
+        <constraintSpec ident="front-element-must-be-present" scheme="schematron">
+          <desc>Front element must be present</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:text[1]">
+              <report test="not(./tei:front)">Front element must be present</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="front-element-starts-on-div" scheme="schematron">
+          <desc>Front element must contain a div with a starts-on xml:id</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:text[1]/tei:front[1]">
+              <report test="not(./tei:div[@xml:id='starts-on'])">Front element must contain a div with a "starts-on" xml:id, i.e. @xml:id='starts-on'</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <!-- rules for body -->
+        <constraintSpec ident="body-must-have-immediate-div-and-no-other-direct-children" scheme="schematron">
+          <desc>Body must have immediate div and no other direct children. Deliberately requires a SINGLE top-level div (monolithic edition structure); if multiple top-level divs are ever needed, relax count(./*) &gt; 1 to ./*[not(self::tei:div)].
+            Note: previously two rule elements shared the identical context
+            "/tei:TEI/tei:text[1]/tei:body[1]", which in Schematron causes first-match shadowing —
+            only the first rule fires and the second ("Body must have ONLY child that is a div")
+            was silently never evaluated. Consolidated into one rule below.</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:text[1]/tei:body[1]">
+              <report test="not(./tei:div[1])">Body must have immediate div</report>
+              <report test="count(./*) > 1">Body must have ONLY child that is a div</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        
+        <!-- rules for head -->
+        
+        <!-- head rules are covered by general tei rules -->
+        
+        <!-- rules for p -->
+        
+        <!-- note that this rule disallows the use of p as children of any other rules. 
+          Thus Ps are not allowed in notes or cites or quotes. P is a privileged structure, 
+          the "ab" element should be used everywhere else there is not for creating structure block units -->
+        
+        <constraintSpec ident="body-p-is-child-of-div" scheme="schematron">
+          <desc>every body p must be an immediate child of a div</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="/tei:TEI/tei:text[1]/tei:body[1]//tei:p">
+              <report test="not(parent::tei:div)">every body p must be an immediate child of a div</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        
+        <!-- optional modules -->
+        
+        
+        
+        <!-- linking module -->
+        <moduleRef key="linking"/>
+        
+        <elementSpec ident="seg" module="core" mode="change">
+          <attList>
+            <attDef ident="ana" usage="opt" mode="change">
+              <valList type="closed" mode="add">
+                <valItem ident="quia-caus">
+                  <gloss>quia-caus</gloss>
+                  <desc>'Quia' como conjunción causal</desc>
+                </valItem>
+                <valItem ident="quia-obj">
+                  <gloss>quia-obj</gloss>
+                  <desc>'Quia' como conjunción de subordinación
+                    (objeto)</desc>
+                </valItem>
+              </valList>
+            </attDef>
+          </attList>
+        </elementSpec>
+        
+        
+        
+        
+        
+        
+        <!-- Name and Date Module -->
+        <moduleRef key="namesdates"/>
+        
+        
+        <moduleRef key="corpus"/>
+        
+        
+        
+        <!-- Text Criticism Module -->
+        <moduleRef key="textcrit"/>
+        
+        <elementSpec ident="rdg" module="textcrit" mode="change">
+          <attList>
+            <attDef ident="type" mode="change" usage="rec">
+              <!-- The Schematron rules for the apparatus (app / lem / rdg) formerly
+                   lived here, inside attDef[type]. Relocated to schemaSpec level
+                   (see "APPARATUS RULES" below) so they no longer depend on the
+                   lifecycle of this attDef: had this attribute definition ever been
+                   removed or its @mode changed, the rules would have vanished with
+                   it silently. Only the valList remains here. -->
+              <valList type="semi" mode="add">
+                <!-- variation rdg types -->
+                <valItem ident="variation-absent">
+                  <gloss>variation-absent</gloss>
+                  <desc>indicates that the witness in question lacks the designated lemma;
+                    often rendered as "omit." or "omitted"</desc>
+                </valItem>
+                <valItem ident="variation-present">
+                  <gloss>variation-present</gloss>
+                  <desc>indicates that the witness in question contains a word
+                    or phrase not included in the critical text.</desc>
+                </valItem>
+                <valItem ident="variation-substance">
+                  <gloss>variation-substance</gloss>
+                  <desc>This is the default variation type, for a simple variation of
+                    words or phrases between witnesses.</desc>
+                </valItem>
+                <valItem ident="variation-orthography">
+                  <gloss>variation-orthography</gloss>
+                  <desc>Indicates a simple orthographic variation.</desc>
+                </valItem>
+                <valItem ident="variation-choice">
+                  <gloss>variation-choice</gloss>
+                  <desc>Indicates a choice of more than one reading in the same witness.</desc>
+                </valItem>
+                <valItem ident="variation-inversion">
+                  <gloss>variation-inversion</gloss>
+                  <desc>Indicates a variant reading where two or more words have been inverted relative to the critical text.</desc>
+                </valItem>
+                <!-- correction rdg types -->
+                <valItem ident="correction-addition">
+                  <gloss>correction-addition</gloss>
+                  <desc>indicates that the current lemma was added to the text by some sort of external imposition, either by the same scribe or a later scribe. There are two options here. If the lemma is empty this indicates that, at this point, the witness in question includes a word or phrase that was chosen not to be included the edited text. If a lemma is included then the addition means that the word identified in the lemma is present in the witness, but is inserted in some way (either in the margin or inter-linearly).</desc>
+                </valItem>
+                <valItem ident="correction-deletion">
+                  <gloss>correction-deletion</gloss>
+                  <desc>indicates that a segment of text was included in the text but then deleted. In such instances the lemma will most likely be left empty.</desc>
+                </valItem>
+                <valItem ident="correction-substitution">
+                  <gloss>correction-substitution</gloss>
+                  <desc>Indicates that the witness in question has deleted a word
+                    and then added a word to replaces the deletion.</desc>
+                </valItem>
+                <valItem ident="correction-transposition">
+                  <gloss>correction-transposition</gloss>
+                  <desc>Indicates that a special kind of substitution where a phrase of two or more words 
+                    has been corrected from one order to another transposed order.</desc>
+                </valItem>
+                <!-- correction-cancellation types -->
+                <valItem ident="deletion-of-addition">
+                  <gloss>Correction cancellation: deletion-of-addition</gloss>
+                  <desc>Indicates that a witness has deleted (or attempted to undo) a previous addition</desc>
+                </valItem>
+                <valItem ident="deletion-of-deletion">
+                  <gloss>Correction cancellation: deletion-of-deletion</gloss>
+                  <desc>Indicates that a witness has deleted (or attempted to undo) a previous deletion</desc>
+                </valItem>
+                <valItem ident="deletion-of-substitution">
+                  <gloss>Correction cancellation: deletion-of-substitution</gloss>
+                  <desc>Indicates that a witness has deleted (or attempted to undo or cancel) a previous substitution</desc>
+                </valItem>
+                <valItem ident="substitution-of-addition">
+                  <gloss>Correction cancellation: substitution-of-addition</gloss>
+                  <desc>Indicates that a witness has is not only cancelling an addition (as in the case of deletion-of-addition)
+                    but is also supplying a new word or phrase to take the old addition's place.</desc>
+                </valItem>
+                <!-- conjecture types -->
+                <valItem ident="conjecture-supplied">
+                  <gloss>conjecture-supplied</gloss>
+                  <desc>According to the the judgement of the editor, an expression is missing from the transmitted text.</desc>
+                </valItem>
+                <valItem ident="conjecture-removed">
+                  <gloss>conjecture-removed</gloss>
+                  <desc>A word or phrase is transmitted in some or all of the textual tradition, but the editor or another scholar has suspected that it does not belong in the text and suggests it be removed.</desc>
+                </valItem>
+                <valItem ident="conjecture-corrected">
+                  <gloss>conjecture-corrected</gloss>
+                  <desc>Parts of all of the textual tradition supports one reading, but an editor or scholar suggests an alternative reading in its place.</desc>
+                </valItem>
+                <!-- manual rdg type -->
+                <valItem ident="manual">
+                  <gloss>manual</gloss>
+                  <desc>manual rdg type input</desc>
+                </valItem>
+              </valList>
+              
+              
+            </attDef>
+            
+            <attDef ident="ana" mode="change" usage="opt"
+              xml:lang="eng">
+              <valList type="closed" mode="add">
+                <valItem ident="aff/pal">
+                  <gloss>affrication/palatization</gloss>
+                  <desc>altior ⟺ alcior</desc><!--c/t-->
+                </valItem>
+                <valItem ident="aph">
+                  <gloss>apheresis</gloss>
+                  <desc>The initial sound or sounds of a word are omitted, 
+                    typically for ease of pronunciation or due
+                    to linguistic evolution, 
+                    e.g. 
+                    <list>
+                      <item>excoriat ⟺ scoriat</item>
+                      <item>hierosolomitane ⟺ ierosolomitane</item>
+                    </list>
+                  </desc>
+                </valItem>
+                <valItem ident="as/dis">
+                  <gloss>assimilation/dissimilartion</gloss>
+                  <desc>e.g. 
+                    <list>
+                      <item n="1">bergario ⟺ bergatio</item>
+                      <item n="2">cumque ⟺ cunque</item>
+                      <item n="3">logica ⟺ loyca</item>
+                      <item n="4">asinus ⟺ azinus</item>
+                      <item n="5">exequi ⟺ exsequi</item>
+                      <item n="6">auferre ⟺ afferre</item>
+                    </list>
+                  </desc>
+                  <remarks>
+                    <ab n="2">
+                      cumque ⟺ cunque: The "m" changes to "n", 
+                      a velar nasal (/ŋ/) that is articulated in
+                      the same area as 
+                      the following velar consonant "q" (/k/). 
+                      This is an instance of place assimilation, 
+                      where the nasal sound adjusts to match the place 
+                      of articulation of the following velar consonant.
+                    </ab>
+                    <ab n="3">Ease of Pronunciation: By changing "i" to a "y" sound, 
+                      the speaker may find it easier to articulate the sequence of sounds. 
+                      Dissimilation often occurs when two sounds are phonetically too similar, 
+                      and changing one makes the word smoother to pronounce.
+                      Vowel Dissimilation: In this case, the two vowels "o" 
+                      and "i" are close to each other, 
+                      and the transformation of "i" into the semivowel "y" 
+                      introduces greater variation in the vowel sounds, 
+                      helping to distinguish them.
+                    </ab>
+                    <ab n="6">
+                      This assimilation simplifies the pronunciation 
+                      by making the consonants more similar, specifically 
+                      turning the "b" ("ab-ferre") 
+                      into an "f" ("afferre")
+                      for easier articulation.
+                    </ab>
+                  </remarks>
+                </valItem>
+                <valItem ident="asp">
+                  <gloss>aspiration</gloss>
+                  <desc>talpa ⟺ thalpa</desc>
+                </valItem>
+                <valItem ident="cap">
+                  <gloss>capitalization</gloss>
+                  <desc>capitalization</desc>
+                </valItem>
+                <valItem ident="case">
+                  <gloss>grammatical case change</gloss>
+                  <desc>e.g. tacente ⟺ tacenti</desc>
+                </valItem>
+                <valItem ident="con">
+                  <gloss>contraction/expansion</gloss>
+                  <desc>audivisti ⟺ audisti</desc>
+                </valItem>
+                <valItem ident="dev/voi">
+                  <gloss>devoicing/voicing</gloss>
+                  <desc>e.g. inquid ⟺ inquit;
+                    celes ⟺ zeles; 
+                    vacca ⟺ facca </desc>
+                </valItem>
+                <valItem ident="doub">
+                  <gloss>doubling</gloss>
+                  <desc>catus ⟺ cattus</desc>
+                </valItem>
+                <valItem ident="equiv">
+                  <gloss>equiv</gloss>
+                  <desc>rough semantic equivalence, 
+                    e.g. hic ⟺ iste</desc>
+                </valItem>
+                <valItem ident="err">
+                  <gloss>obvious copyist error</gloss>
+                  <desc>e.g. tamen ⟺ tanem</desc>
+                </valItem>
+                <valItem ident="gen">
+                  <gloss>gender</gloss>
+                  <desc>change in grammatical gender
+                    e.g. bonus ⟺ bona</desc>
+                </valItem>
+                <valItem ident="hap">
+                  <gloss>haplology/epenthesis</gloss>
+                  <desc>A sequence of similar or identical sounds or syllables 
+                    is simplified by omitting one of them (or added, made more complex). 
+                    It often occurs to make pronunciation easier or smoother. 
+                    E.g. disrupta ⟺ dirupta. </desc>
+                </valItem>
+                <valItem ident="len/fort">
+                  <gloss>consonant lenition/fortition</gloss>
+                  <desc>The softening (lenition) or strenghtening (fortition) of a consonant,
+                    e.g. 
+                    <list>
+                      <item>gibbosus ⟺ gipposus</item>
+                      <item>vacca ⟺ facca</item>
+                      <item>nihil ⟺ nichil</item>
+                      <item>mihi ⟺ michi</item>
+                    </list>
+                  </desc>
+                </valItem>
+                <valItem ident="lig">
+                  <gloss>ligature</gloss>
+                  <desc>ligature equivalence:
+                    palacy ⟺ palacii</desc>
+                </valItem>
+                <valItem ident="mt">
+                  <gloss>metathesis</gloss>
+                  <desc>Two adjacent or nearby sounds (consonants or vowels) 
+                    in a word switch places with each other,
+                    e.g. altercatio ⟺ altricatio</desc>
+                </valItem>
+                <valItem ident="name">
+                  <gloss>name</gloss>
+                  <desc>proper-name variation,
+                    e.g. Gabaon ⟺ Gabata</desc>
+                </valItem>
+                <valItem ident="par">
+                  <gloss>parenthesis</gloss>
+                  <desc>The inclusion/elimination of opening/closing parentheses.</desc>
+                </valItem>
+                <valItem ident="pg">
+                  <gloss>paragoge</gloss>
+                  <desc>A sound or syllable is added to the end of a word. 
+                    This often happens to modify the structure of the word 
+                    for grammatical or phonetic reasons, 
+                    sometimes to make pronunciation easier or 
+                    to clarify meaning in specific contexts.
+                    E.g.
+                    <list>
+                      <item>nec ⟺ neque</item>
+                      <item>hic ⟺ hicce</item>
+                    </list>
+                  </desc>
+                </valItem>
+                <valItem ident="punct">
+                  <gloss>punctuation</gloss>
+                  <desc>The inclusion/elimination of significant punctuation.</desc>
+                </valItem>
+                <valItem ident="syn/epen">
+                  <gloss>syncope/epenthesis</gloss>
+                  <desc>An unstressed vowel or syllable 
+                    within a word is omitted (added), 
+                    e.g. 
+                    <list>
+                      <item n="1">pepulum ⟺ peplum</item>
+                      <item n="2">litigiosus ⟺ litigosus</item>
+                      <item n="3">persequutione ⟺ persecutione</item>
+                    </list>
+                  </desc>
+                  <remarks>
+                    <ab n="3">
+                      The transformation from "persequutione" to "persecutione" 
+                      is a case of vowel syncope, where the unstressed "u"
+                      in the middle of the word is omitted, resulting in a shorter, 
+                      more streamlined form.
+                      This process helps simplify the pronunciation of the word.
+                    </ab>
+                  </remarks>
+                </valItem>
+                <valItem ident="sep">
+                  <gloss>word separation</gloss>
+                  <desc>e.g. nonnihil ⟺ non nihil</desc>
+                </valItem>
+                <valItem ident="vow">
+                  <gloss>vowel transformation: lowering or raising; reduction or simplification; merger; alternation or gradation</gloss>
+                  <desc>e.g. 
+                    <list>
+                      <item n="1">rugosa ⟺ rogosa</item>
+                      <item n="2">coena ⟺ cena</item> 
+                      <item n="3">animae ⟺ anime</item>
+                      <item n="4">similans ⟺ simulans</item>
+                      <item n="5">excitatio ⟺ excitacio (ti⟺ci)</item>
+                    </list>
+                  </desc>
+                  <remarks>
+                    <ab n="5">"tio" (two syllables: /ti-o/) is simplified in "cio" (one syllable: /t͡ʃo/)</ab>
+                  </remarks>
+                </valItem>
+                <valItem ident="ø">
+                  <gloss>Introduction/elimination of letters not analyzable otherwise.</gloss>
+                  <desc>nihil ⟺ nil</desc>
+                </valItem>
+              </valList>
+            </attDef>
+            
+          </attList>
+          
+        </elementSpec>
+        
+        
+        
+        <!-- The lem element -->
+        <elementSpec ident="lem" module="textcrit" mode="change">
+          <attList>
+            <attDef ident="type" mode="change" usage="opt">
+              <valList type="semi" mode="add">
+                <!-- conjecture types -->
+                <valItem ident="conjecture-supplied">
+                  <gloss>conjecture-supplied</gloss>
+                  <desc>According to the the judgement of the editor, an expression is missing from the transmitted text.</desc>
+                </valItem>
+                <valItem ident="conjecture-removed">
+                  <gloss>conjecture-removed</gloss>
+                  <desc>A word or phrase is transmitted in some or all of the textual tradition, but the editor or another scholar has suspected that it does not belong in the text and suggests it be removed.</desc>
+                </valItem>
+                <valItem ident="conjecture-corrected">
+                  <gloss>Conjecture Corrected</gloss>
+                  <desc>Parts of all of the textual tradition supports one reading, but an editor or scholar suggests an alternative reading in its place.</desc>
+                </valItem>
+              </valList>
+            </attDef>
+          </attList>
+        </elementSpec>
+        
+        
+        <!-- Primary Source Transcription Module -->
+        <moduleRef key="transcr"/>
+        
+        <!-- Ms Description Module -->
+        <!-- not sure what elements need here; but I will probably need a lot more elements for the official bibliographyy of the mansucriopt witnesses -->
+        <moduleRef key="msdescription"/>
+        
+        <!-- Character and Glyph Documentat Module -->
+        <!-- may not be necessary once <pc> element replaces glyps -->
+        <moduleRef key="gaiji"/>
+        
+        <!-- analysis module -->
+        <moduleRef key="analysis"/>
+        
+        <!-- attribute class modifications -->
+        
+        <classSpec ident="att.placement" type="atts" mode="change">
+          <attList>
+            <attDef ident="place" mode="change" usage="rec">
+              
+              <valList type="semi" mode="replace">
+                <valItem ident="above-line">
+                  <gloss>Above Line</gloss>
+                  <desc>Inter-linearly, above the line in which it is being inserted</desc>
+                </valItem>
+                <valItem ident="margin-left">
+                  <gloss>Left Margin</gloss>
+                  <desc>In the left margin of the page</desc>
+                </valItem>
+                <valItem ident="margin-right">
+                  <gloss>Right Margin</gloss>
+                  <desc>In the right margin of the page</desc>
+                </valItem>
+                <valItem ident="margin-bottom">
+                  <gloss>Bottom Margin</gloss>
+                  <desc>In the bottom margin of the page</desc>
+                </valItem>
+                <valItem ident="margin-top">
+                  <gloss>Top Margin</gloss>
+                  <desc>In the top margin of the page</desc>
+                </valItem>
+                <valItem ident="in-line">
+                  <gloss>In line</gloss>
+                  <desc>the addition is made in the line itself</desc>
+                </valItem>
+                <!-- TODO: do we need to support this -->
+                <valItem ident="in-space">
+                  <gloss>In space</gloss>
+                  <desc>In a predefined space left for an addition, perhaps a space left by another scribe.</desc>
+                </valItem>
+              </valList>
+            </attDef>
+          </attList>
+        </classSpec>
+        
+                <!-- ============================ APPARATUS RULES ============================
+             Schematron rules for app / lem / rdg. Relocated 2026-07-10 from inside
+             elementSpec[rdg]/attList/attDef[type], where their survival was tied to
+             that attribute definition. -->
+        <!-- here are the rules for reading types -->
+        <!-- general app rules -->
+        <constraintSpec ident="app-basic-structure-rules" scheme="schematron">
+          <desc>Structural requirements for every app element: must have a lem, must have at least
+            one rdg descendant, and must not repeat the same witness siglum across its lem/rdg children.
+            Note: these three checks were previously split across three separate constraintSpecs
+            ("app-must-have-lemma", "app-must-have-rdg", "no-repeted-wits-in-app"), all sharing the
+            identical context "tei:app". In Schematron this causes first-match shadowing: only the
+            first rule with a given context ever fires for a node, so the second and third checks were
+            silently never evaluated against any app element in the corpus. Consolidated into one rule.
+            Additionally: witness-closure check for NESTED apparatus (2026-07-17). When an app is
+            nested inside a lem or rdg that carries @wit, the union of the witness tokens cited by
+            the inner app's lem/rdg members must be EXACTLY the witness set of the enclosing
+            reading — every witness of the enclosing lem/rdg must take a position in the inner
+            apparatus, and the inner apparatus must not cite witnesses foreign to it. Merged into
+            this rule (rather than a separate constraintSpec with the subset context
+            tei:app[parent::tei:lem]) per the house principle against subset-context shadowing.</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:app">
+              <report test="not(./tei:lem)">app must have lemma</report>
+              <report test="not(.//tei:rdg)">app must have rdg</report>
+              <!-- lem is checked as a direct child but rdg as a descendant: deliberate,
+                   since rdg may be nested inside rdgGrp (the corpus contains rdgGrp). -->
+              <report test="some $token in distinct-values(tokenize(string-join(*/@wit, ' '), '\s+')) satisfies count(*/@wit[contains(concat(' ', ., ' '), concat(' ', $token, ' '))]) > 1">Inside an app there must not be repeated witnesses inside lem and rdg</report>
+              <!-- Witness closure for nested apparatus, epsilon-aware (2026-07-17):
+                   - COVERAGE (every witness of the enclosing reading must take a position
+                     in the inner apparatus) applies only when the inner apparatus has NO
+                     epsilon member: an epsilon-anchored inner app (variation-present
+                     convention) implicitly assigns all remaining witnesses to the
+                     edition's side, so coverage is waived there.
+                   - FOREIGNNESS (the inner apparatus must not cite real witnesses absent
+                     from the enclosing reading) applies always.
+                   - Enclosing readings that cite only epsilon (edition text containing an
+                     apparatus of the real tradition) are exempt from both checks. -->
+              <!-- Nested-apparatus witness checks, FAMILY-AWARE (2026-07-19).
+                   Group sigla are expanded to leaf witnesses before comparison, in two
+                   passes (enough for the current depth: ε -> δ κ π -> leaves):
+                   a token resolves to (a) the members of a listWit whose @xml:id it
+                   names, (b) the tokens of @corresp on a witness element (used for the
+                   composite sigla ε and α, whose membership must be declared as e.g.
+                   witness[@xml:id='α']/@corresp='#A #E #G #I'), or (c) itself.
+                   The token #ε remains opaque and exempt on both sides: inside a nested
+                   apparatus it denotes the paradosis/ceteri relative to the enclosing
+                   reading, so full expansion would be semantically wrong there.
+                   When the document carries no listWit (e.g. fragments), every token
+                   resolves to itself and the checks degrade gracefully to leaf-level. -->
+              <let name="nst_parent_raw" value="tokenize(normalize-space(parent::tei:lem/@wit), '\s+')[. != '#ε']"/>
+              <let name="nst_inner_raw" value="distinct-values(for $a in (tei:lem|tei:rdg)/@wit
+                    return tokenize(normalize-space($a), '\s+'))[. != '#ε']"/>
+              <let name="nst_parent_l1" value="distinct-values(for $t in $nst_parent_raw return
+                    if (//tei:listWit[@xml:id = substring-after($t, '#')])
+                    then (for $w in //tei:listWit[@xml:id = substring-after($t, '#')]//tei:witness/@xml:id
+                          return concat('#', $w))
+                    else if (//tei:witness[@xml:id = substring-after($t, '#')]/@corresp)
+                    then tokenize(normalize-space(string(//tei:witness[@xml:id = substring-after($t, '#')]/@corresp)), '\s+')
+                    else $t)[. != '#ε']"/>
+              <let name="nst_parent_exp" value="distinct-values(for $t in $nst_parent_l1 return
+                    if (//tei:listWit[@xml:id = substring-after($t, '#')])
+                    then (for $w in //tei:listWit[@xml:id = substring-after($t, '#')]//tei:witness/@xml:id
+                          return concat('#', $w))
+                    else if (//tei:witness[@xml:id = substring-after($t, '#')]/@corresp)
+                    then tokenize(normalize-space(string(//tei:witness[@xml:id = substring-after($t, '#')]/@corresp)), '\s+')
+                    else $t)[. != '#ε']"/>
+              <let name="nst_inner_l1" value="distinct-values(for $t in $nst_inner_raw return
+                    if (//tei:listWit[@xml:id = substring-after($t, '#')])
+                    then (for $w in //tei:listWit[@xml:id = substring-after($t, '#')]//tei:witness/@xml:id
+                          return concat('#', $w))
+                    else if (//tei:witness[@xml:id = substring-after($t, '#')]/@corresp)
+                    then tokenize(normalize-space(string(//tei:witness[@xml:id = substring-after($t, '#')]/@corresp)), '\s+')
+                    else $t)[. != '#ε']"/>
+              <let name="nst_inner_exp" value="distinct-values(for $t in $nst_inner_l1 return
+                    if (//tei:listWit[@xml:id = substring-after($t, '#')])
+                    then (for $w in //tei:listWit[@xml:id = substring-after($t, '#')]//tei:witness/@xml:id
+                          return concat('#', $w))
+                    else if (//tei:witness[@xml:id = substring-after($t, '#')]/@corresp)
+                    then tokenize(normalize-space(string(//tei:witness[@xml:id = substring-after($t, '#')]/@corresp)), '\s+')
+                    else $t)[. != '#ε']"/>
+              <assert test="not(parent::tei:lem[@wit]) or empty($nst_parent_raw)
+                  or (every $w in $nst_inner_exp satisfies $w = $nst_parent_exp)">
+                Nested app: witness(es) cited by an inner lem/rdg (after expanding family
+                sigla) not covered by the @wit of the enclosing lem:
+                <value-of select="string-join($nst_inner_exp[not(. = $nst_parent_exp)], ' ')"/>
+              </assert>
+              <assert test="not(parent::tei:lem[@wit]) or empty($nst_parent_raw)
+                  or (tei:lem|tei:rdg)/@wit[contains(concat(' ', normalize-space(.), ' '), ' #ε ')]
+                  or (every $w in $nst_parent_exp satisfies $w = $nst_inner_exp)">
+                Nested app: witness(es) of the enclosing lem (after expanding family sigla)
+                taking no position in the inner apparatus:
+                <value-of select="string-join($nst_parent_exp[not(. = $nst_inner_exp)], ' ')"/>
+              </assert>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="rdg-must-have-wit-or-source" scheme="schematron">
+          <desc>rdg must have wit or source attribute</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg">
+              <report test="not(./@wit) and not(./@source)">rdg must have wit or source attribute</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="empty-lemma-corresp-attribute" scheme="schematron">
+          <desc>Editorially empty lem (no element children, no non-whitespace text) must have
+            a corresp attribute pointing to its textual anchor. Each pointer must be a
+            local reference (#xml:id) resolving to an existing element in the document,
+            and the lem must be followed by an rdg sibling with @type="variation-present".
+            Emptiness is defined broadly — not(*) and not(normalize-space()) — so that
+            whitespace-only lems (e.g. produced by pretty-printing a formerly self-closed
+            element) are still caught; the same broad definition is used by the
+            variation-present and variation-absent rules for consistency.
+            History: (1) "empty-lemma-rdg-var-pres" previously shared the identical context
+            with this constraintSpec as a separate block, causing first-match shadowing;
+            consolidated here. (2) An earlier revision placed the broad-emptiness test
+            inside the assert while the context still required not(node()), making the
+            broadening dead code; the emptiness definition now lives in the context.</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron"
+              context="tei:lem[not(*)][not(normalize-space())]">
+              <assert test="@corresp">
+                Empty lem must have a corresp attribute.
+              </assert>
+              <assert test="not(@corresp) or
+                (every $t in tokenize(normalize-space(@corresp), '\s+')
+                 satisfies (starts-with($t, '#')
+                            and exists(//*[@xml:id = substring-after($t, '#')])))">
+                Every pointer in the corresp attribute of this empty lem must be a local
+                reference (#xml:id) resolving to an element in the document.
+                <!-- Optimization note: with a Saxon-based engine, exists(id(substring-after($t,'#')))
+                     avoids the full-document scan; the //* form is kept for engine portability. -->
+              </assert>
+              <assert test="following-sibling::tei:rdg[1][@type='variation-present']">
+                An empty lem must be followed by an rdg with @type="variation-present".
+              </assert>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <!-- variation type rules -->
+        <constraintSpec ident="variation-absent-rule" scheme="schematron">
+          <desc>Requires an empty rdg element and a non-empty preceding sibling lem when rdg has type=variation-absent. Emptiness/non-emptiness is judged editorially (element children or non-whitespace text), in harmony with "empty-lemma-corresp-attribute".
+            Note: previously two rule elements shared the identical context "tei:rdg[@type='variation-absent']",
+            causing first-match shadowing — only the first rule fired and the second
+            ("The preceding sibling lem must have a child node") was silently never evaluated.
+            Consolidated into one rule below.</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg[@type='variation-absent']">
+              <report test="./text()">This is a rdg type=variation-absent. The value of the rdg element cannot have any text nodes.</report>
+              <report test="not(preceding-sibling::tei:lem[* or normalize-space()])">This is a rdg type=variation-absent. The preceding sibling lem must have content (element children or non-whitespace text).</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="variation-present-rule" scheme="schematron">
+          <desc>Requires an editorially empty lem element and a non-empty rdg when rdg has type=variation-present. Emptiness is judged editorially (no element children, no non-whitespace text), in harmony with "empty-lemma-corresp-attribute".
+            Note: previously this constraintSpec held two separate rule elements sharing the same context
+            ("tei:rdg[@type='variation-present']"), which in Schematron causes first-match shadowing:
+            only the first rule fires for a given node and the second is silently never evaluated.
+            All assertions for this context have been consolidated into a single rule element below.
+            The requirement that the preceding sibling lem carry a corresp attribute is enforced generically
+            by the "empty-lemma-corresp-attribute" constraintSpec (context tei:lem[not(node())]) and is
+            intentionally not repeated here to avoid duplicate error reporting for the same defect.</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg[@type='variation-present']">
+              <report test="preceding-sibling::tei:lem[* or normalize-space()]">This is a rdg type=variation-present. The preceding sibling lem must be editorially empty (no element children, no non-whitespace text).</report>
+              <report test="not(./node())">This is a rdg type=variation-present. The rdg element must have a child node</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="variation-choice-rule" scheme="schematron">
+          <desc>The reading of a variation-choice must contain a choice element as a direct child</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg[@type='variation-choice']">
+              <report test="not(./tei:choice)">The reading of a variation-choice must contain a choice element as a direct child</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        
+        <!-- "no-repeted-wits-in-app" was merged into "app-basic-structure-rules" above,
+             to fix the cross-constraintSpec context shadowing on tei:app -->
+        
+        
+        <!-- correction rules -->
+        <constraintSpec ident="correction-addition-rule" scheme="schematron">
+          <desc>Requires that rdg have a add child element when rdg has type=correction-addition</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg[@type='correction-addition']">
+              <report test="not(./tei:add)">This is a rdg type=correction-addition. The rdg must contain an add element</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="correction-deletion-rule" scheme="schematron">
+          <desc>Requires that rdg have a del child element when rdg has type=correction-deletion</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg[@type='correction-deletion']">
+              <report test="not(./tei:del)">This is a rdg type=correction-deletion. The rdg must contain an del element</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="correction-substitution-rule" scheme="schematron">
+          <desc>Requires that rdg have a del child element when rdg has type=correction-substitution</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg[@type='correction-substitution']">
+              <report test="not(./tei:subst)">This is a rdg type=correction-substitution. The rdg must contain an subst element</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <!-- conjecture rules -->
+        <constraintSpec ident="conjecture-supplied-rule" scheme="schematron">
+          <desc>lem or rdg that contains conjecture supplied must contain supplied as child</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg[@type='conjecture-supplied']|tei:lem[@type='conjecture-supplied']">
+              <report test="not(./tei:supplied)">lem or rdg that contains conjecture supplied must contain supplied as child</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="conjecture-removed-rule" scheme="schematron">
+          <desc>lem or rdg that contains conjecture removed must contain surplus as child</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg[@type='conjecture-removed']|tei:lem[@type='conjecture-removed']">
+              <report test="not(./tei:surplus)">lem or rdg that contains conjecture removed must contain surplus as child</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        <constraintSpec ident="conjecture-corrected-rule" scheme="schematron">
+          <desc>lem or rdg that contains conjecture corrected must contain corr as child</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:rdg[@type='conjecture-corrected']|tei:lem[@type='conjecture-corrected']">
+              <report test="not(./tei:corr)">lem or rdg that contains conjecture corrected must contain corr as child</report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        
+        
+        
+        <!-- ========================== END APPARATUS RULES ========================== -->
+
+        <constraintSpec ident="app-no-epsilon-with-A-T-rule" scheme="schematron">
+          <desc>Disallows app elements containing both lem with wit="#ε" and rdg with wit containing any letter between A and T</desc>
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="tei:app[tei:lem[contains(@wit, '#ε')]]">
+              <report test="tei:rdg[matches(@wit, '#[A-T](\s|$)')]">
+                An app element containing a lem with wit="#ε" cannot contain a rdg with wit attribute 
+                having a letter between A and T.
+              </report>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        
+        
+        
+        <constraintSpec ident="who-must-resolve" scheme="schematron">
+          <constraint>
+            <rule xmlns="http://purl.oclc.org/dsdl/schematron" context="*[@who]">
+              <assert test="every $t in tokenize(normalize-space(@who), '\s+')
+                satisfies (starts-with($t, '#')
+                and exists(//*[@xml:id = substring-after($t, '#')]))">
+                Every @who pointer must be a local reference resolving to a
+                declared participant.
+              </assert>
+            </rule>
+          </constraint>
+        </constraintSpec>
+        
+        
+        
+      </schemaSpec>
+    </body>
+  </text>
+</TEI>

@@ -1,6 +1,6 @@
 # validate.py — Schematron validation from the terminal
 
-**Version 1.2** (`validate.py --version`)
+**Version 1.3** (`validate.py --version`)
 
 Schematron-layer validator for the SMTrad project. It extracts the ISO
 Schematron rules embedded in the ODD (`smed-schema.xml`) and runs them
@@ -206,9 +206,7 @@ Covered — the exact subset the smed ODD uses:
 
 Not implemented — the script **warns on stderr once per kind** and
 continues: `phase` (all patterns are run), abstract patterns/rules
-(skipped), `diagnostics`, `xsl:key`, `sch:value-of` inside messages (text
-is flattened: the message appears without the interpolated value), and
-elements from other namespaces such as `sqf:fix` (oXygen Quick Fixes, which
+(skipped), `diagnostics`, `xsl:key`, and elements from other namespaces such as `sqf:fix` (oXygen Quick Fixes, which
 do not affect verdicts). None of this occurs with the smed ODD; with
 Guidelines Schematron (§7) you will see the `value-of` and `sqf` notices.
 
@@ -358,6 +356,7 @@ Decisions best not re-litigated without rereading the project's history:
 
 | Version | Date | Changes |
 |---|---|---|
+| **1.3** | 2026-07-19 | `sch:value-of` in assert/report messages is now **interpolated** (evaluated in the offending node's context, with the rule's `let`s): the `-v` detail shows e.g. the exact missing/foreign sigla; the aggregate count still groups by static template |
 | **1.2** | 2026-07-17 | Schema auto-detection from `<?xml-model?>` PIs with download and caching of remote schemas (`.schema-cache/`, `--refresh`); content-based schema classification (RNG/Schematron/ODD); source flags now optional; `--version`. Matching `validate-all.sh`: auto mode without a schema argument, reusing validate.py's resolution and cache |
 | 1.1 | 2026-07-12 | `-r` route (harvesting of RelaxNG-embedded Schematron, with deduplication); fix for the namespace-serialization bug in harvesting (`cleanup_namespaces`) plus **post-harvest self-check**; `current()` support (P5 rules); malformed-document guard; empty-schema guards (ODD and RNG); exit code 3 for environment errors; **dual-mtime** cache (source + script); two-layer wrapper `validate-all.sh` |
 | 1.0 | 2026-07-10 | Initial release: ODD→`.sch` extraction (`-o`) with mtime cache, direct `.sch` (`-s`), Schematron runner on Saxon/XPath 3.1 (pattern/rule/assert/report/let, first-match shadowing), report without hidden caps, offender resolution to line + `xml:id`, exit codes 0/1/2 |
