@@ -12,7 +12,7 @@
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://codeberg.org/nivaca/validate"
+    "url": "https://codeberg.org/nivaca/py-validate"
   },
   "engines": {
     "vscode": "^1.85.0"

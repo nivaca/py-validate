@@ -13,16 +13,17 @@ for Visual Studio Code shows the same results in the editor, underlined
 as you type.  Nicolas Vaughan made it in 2026, for the editions of the
 SMTrad project.  Here I explain how it was made, in eight stages.
 
-validate.py is free software, under the GNU General Public License,
-version 3 or later.  It is written in Python and stands on two libraries: saxonche (Saxon C), which evaluates
-the rules with XPath 3.1, and lxml, which finds the lines and the
-`xml:id`s.  The structural layer uses jing, and the extension is written
-in TypeScript.
+It stands on four pieces of other people's work: Saxon, through saxonche
+(Saxon C), which evaluates the rules with XPath 3.1; lxml, which finds
+the lines and the `xml:id`s; jing, by James Clark, which checks the
+RelaxNG structure; and the stylesheet `extract-isosch.xsl` of the TEI
+Stylesheets, which extracts the Schematron of an ODD.  validate.py is
+free software, under the GNU General Public License, version 3 or later.
 
 Nicolas Vaughan is Associate Professor of Literature at the School of Arts
 and Humanities of the Universidad de los Andes, Bogotá, Colombia.
 
-1.  A report without a cap
+1. A report without a cap
 -------------------------
 
 The project's documents were validated in oXygen, which turned out to
@@ -50,7 +51,7 @@ the project, runs at the speed of C, and its XPath 3.1 is a superset of
 oXygen's, so `matches()`, `tokenize()`, `some`/`every` and `let` behave
 the same way.
 
-2.  RelaxNG, and two layers
+2. RelaxNG, and two layers
 --------------------------
 
 Version 1.1 (July 2026) added a second source of rules: a RelaxNG schema
@@ -71,7 +72,7 @@ same RelaxNG file: the structure with jing (or lxml, without it), then
 the rules with validate.py, and combines their verdicts in its exit
 code.
 
-3.  Finding the schema
+3. Finding the schema
 ---------------------
 
 From version 1.2 (July 2026) no schema has to be given: validate.py reads
@@ -83,7 +84,7 @@ gained the same detection.  Version 1.3 made the messages more useful:
 the `<value-of>`s inside them are evaluated for each offence, so a
 message names, for example, the exact sigla that are missing.
 
-4.  Rules that never ran
+4. Rules that never ran
 -----------------------
 
 A review of the code in November 2026 found the most serious kind of
@@ -101,7 +102,7 @@ of an attribute printed the whole attribute, `corresp=" corresp="#" "`,
 instead of its value; and the spaces around an inserted value were
 changed.
 
-5.  A Visual Studio Code extension
+5. A Visual Studio Code extension
 ---------------------------------
 
 Version 1.5 gave validate.py a `--json` report, with every offence, its
@@ -120,7 +121,7 @@ works, a tick when the file is clean, the number of problems, or a red
 "failed" when it cannot run (0.3).  Without it, a clean file looked
 exactly like an extension that did not work.
 
-6.  Two validations at once
+6. Two validations at once
 --------------------------
 
 After a reload, VS Code validated two files at the same moment, and one
@@ -134,7 +135,7 @@ replaced, and a download that is not XML is never kept.  In a test that
 re-downloaded the schema for 20 seconds while three other processes
 validated, the old version failed 88 times in 635; the new one, never.
 
-7.  Validating as you type
+7. Validating as you type
 -------------------------
 
 Version 0.4 of the extension validates the text being edited, unsaved
@@ -155,7 +156,7 @@ jing reports the position just after a start tag, often at the end of a
 line, which gave underlines of no width that VS Code does not draw; now
 the tag itself is underlined (0.4.1).
 
-8.  Finishing touches
+8. Finishing touches
 --------------------
 
 A remote schema is downloaded once, so a new version of it was not seen
@@ -169,6 +170,16 @@ its own, so nothing appears on the screen and the user's settings are
 not touched.  Both use `docs/example/`, a short TEI text with deliberate
 mistakes and a small RelaxNG schema with Schematron rules embedded in it.
 
+Last, the project changed from the MIT licence to the GPL, version 3 or
+later (0.5.2), like my other projects.  Each release now carries two
+files, which `tools/bundle-zip.py` makes in `dist/`: a zip of
+validate.py with its documentation, made from the files that git
+tracks, and the extension's package.  The extension has a changelog, and
+a GitHub workflow tests and packages it with each release tag and can
+publish it in the Visual Studio Marketplace with Trusted Publishing,
+without storing any key (0.5.3).  The repositories were renamed
+py-validate.
+
 Testing
 -------
 
@@ -181,12 +192,13 @@ inside a real VS Code, without a screen and with a profile of its own:
 it checks that the errors land on the right lines and are visibly
 underlined, that a misspelt element is found, that unsaved changes are
 validated, and that *Refresh Schema* picks up a schema changed on a
-small web server.
+small web server.  The tests of the extension also run on GitHub Actions
+with each release tag.
 
 validate.py is checked on small documents and schemas made for each
 case (shadowing, `let`s at every level, namespaces, attributes,
 malformed text, the three sources of rules), compared before and after
 each change, and on the example in `docs/example/`; the cache was
-checked with the test of concurrent runs described above.  The project
-has now about 2,200 lines: 660 in validate.py, 160 in validate-all.sh,
-590 in the extension, 450 in its tests, and 370 in the screenshot tool.
+checked with the test of concurrent runs described above.  The zip of
+each release is tried by unzipping it and running it.  The program has
+now 12 files of code, around 2,450 lines.

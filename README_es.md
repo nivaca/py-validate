@@ -21,8 +21,8 @@ detallado, número de línea y `xml:id` de cada infractor.
   sus mensajes al pasar el puntero, todos ellos en el panel Problemas
   (Schematron, RelaxNG y buena formación), y el recuento en la barra de
   estado. Descarga el `.vsix` de la última versión publicada
-  ([Codeberg](https://codeberg.org/nivaca/validate/releases) o
-  [GitHub](https://github.com/nivaca/validate/releases)) e instálalo con
+  ([Codeberg](https://codeberg.org/nivaca/py-validate/releases) o
+  [GitHub](https://github.com/nivaca/py-validate/releases)) e instálalo con
   `code --install-extension validate-schematron-*.vsix`. Véase
   [Extensión de VS Code](#32-extensión-de-vs-code).
 
@@ -222,8 +222,8 @@ resultados como diagnósticos en el editor y en el panel Problemas:
   *Select Python Interpreter…*, *Show Output* y *Clear Diagnostics*.
 
 **Instalación:** descarga `validate-schematron-*.vsix` de la última versión
-publicada ([Codeberg](https://codeberg.org/nivaca/validate/releases) o
-[GitHub](https://github.com/nivaca/validate/releases)) y luego
+publicada ([Codeberg](https://codeberg.org/nivaca/py-validate/releases) o
+[GitHub](https://github.com/nivaca/py-validate/releases)) y luego
 
 ```sh
 code --install-extension validate-schematron-*.vsix

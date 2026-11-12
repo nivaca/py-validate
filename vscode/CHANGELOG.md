@@ -3,8 +3,8 @@
 All notable changes to the Schematron Validator extension. Each version
 bundles its own copy of `validate.py`; its version is given where it
 changed. The releases, with their `.vsix` files, are on
-[Codeberg](https://codeberg.org/nivaca/validate/releases) and
-[GitHub](https://github.com/nivaca/validate/releases).
+[Codeberg](https://codeberg.org/nivaca/py-validate/releases) and
+[GitHub](https://github.com/nivaca/py-validate/releases).
 
 ## 0.5.3 — 2026-11-12
 

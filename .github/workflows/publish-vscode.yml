@@ -5,7 +5,7 @@
 # One-time setup:
 #   1. On https://marketplace.visualstudio.com/manage, publisher "nivaca":
 #      add a Trusted Publishing policy for the GitHub repository
-#      nivaca/validate and the workflow file publish-vscode.yml.
+#      nivaca/py-validate and the workflow file publish-vscode.yml.
 #   2. On GitHub, Settings > Secrets and variables > Actions > Variables:
 #      add VSCE_TRUSTED_PUBLISHING with the value true.
 # Until then the workflow only tests and packages the extension.

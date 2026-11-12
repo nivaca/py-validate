@@ -1,11 +1,11 @@
 # Schematron Validator for VS Code
 
 Validates XML/TEI documents against Schematron rules using
-[validate.py](https://codeberg.org/nivaca/validate). It can also check
+[validate.py](https://codeberg.org/nivaca/py-validate). It can also check
 RelaxNG structure with jing. Results appear as squiggles in the editor and in
 the Problems panel.
 
-![The extension on a TEI document: errors underlined, the message of one, the Problems panel and the count in the status bar](https://codeberg.org/nivaca/validate/raw/branch/main/docs/img/vscode_dark.png)
+![The extension on a TEI document: errors underlined, the message of one, the Problems panel and the count in the status bar](https://codeberg.org/nivaca/py-validate/raw/branch/main/docs/img/vscode_dark.png)
 
 ## What it does
 
@@ -102,7 +102,7 @@ says so.
 ## License
 
 Copyright (C) 2026 Nicolas Vaughan. Free software under the GNU General
-Public License, version 3 or later; see [LICENSE](https://codeberg.org/nivaca/validate/src/branch/main/LICENSE).
+Public License, version 3 or later; see [LICENSE](https://codeberg.org/nivaca/py-validate/src/branch/main/LICENSE).
 
 ## Building
 

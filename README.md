@@ -19,8 +19,8 @@ in verbose mode, the line number and `xml:id` of every offender.
   editor, **as you type**: errors underlined in the text, their messages on
   hover, all of them in the Problems panel (Schematron, RelaxNG and
   well-formedness), and the count in the status bar. Download the `.vsix`
-  from the latest release ([Codeberg](https://codeberg.org/nivaca/validate/releases)
-  or [GitHub](https://github.com/nivaca/validate/releases)) and install it
+  from the latest release ([Codeberg](https://codeberg.org/nivaca/py-validate/releases)
+  or [GitHub](https://github.com/nivaca/py-validate/releases)) and install it
   with `code --install-extension validate-schematron-*.vsix`. See
   [VS Code extension](#32-vs-code-extension).
 
@@ -219,8 +219,8 @@ results as diagnostics in the editor and the Problems panel:
   *Select Python Interpreter…*, *Show Output* and *Clear Diagnostics*.
 
 **Install:** download `validate-schematron-*.vsix` from the latest release
-([Codeberg](https://codeberg.org/nivaca/validate/releases) or
-[GitHub](https://github.com/nivaca/validate/releases)), then
+([Codeberg](https://codeberg.org/nivaca/py-validate/releases) or
+[GitHub](https://github.com/nivaca/py-validate/releases)), then
 
 ```sh
 code --install-extension validate-schematron-*.vsix
