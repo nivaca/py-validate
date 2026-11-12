@@ -1,6 +1,6 @@
 # validate.py — Schematron validation from the terminal
 
-**Version 1.4** (`validate.py --version`)
+**Version 1.5** (`validate.py --version`)
 
 Schematron-layer validator for the SMTrad project. It extracts the ISO
 Schematron rules embedded in the ODD (`smed-schema.xml`) and runs them
@@ -66,7 +66,7 @@ from anywhere.
 ## 3. Usage
 
 ```
-python3 validate.py [-o ODD | -s SCH | -r RNG] [-v] [--max N] [--refresh] DOC.xml [...]
+python3 validate.py [-o ODD | -s SCH | -r RNG] [-v] [--max N] [--refresh] [--json] DOC.xml [...]
 ```
 
 Since v1.2, the schema flags are **optional**: without them, the schema is
@@ -79,8 +79,8 @@ Since v1.2, the schema flags are **optional**: without them, the schema is
 | `-r, --rng PATH` | **Harvests** the `sch:ns`/`sch:pattern` annotations embedded in an ODD-generated RelaxNG (deduplicated, cached) and validates against them — the very rules Jing ignores |
 | `-v, --verbose` | Detailed listing: line, `xml:id`, message per offender |
 | `--max N` | Maximum offenders in the detailed listing (default 50). If there are more, the script **says how many were left out** — it never truncates silently |
-
 | `--refresh` | With auto-detection: re-download a remote schema even if cached |
+| `--json` | Machine-readable report on stdout: every violation (pattern, context, assert/report, `role`, message, interpolated text, `fn:path`, line, `xml:id`), XPath errors per rule, and the schema source; ignores `-v`/`--max`. A malformed document becomes an `error` entry instead of aborting the run. Progress messages still go to stderr (used by the VS Code extension, §3.2) |
 
 The three explicit sources are mutually exclusive; when none is given,
 auto-detection takes over.
@@ -153,6 +153,19 @@ python3 validate.py -s smed-schema.sch ed_lat.xml || echo "pending issues"
 | 1 | one or more violations |
 | 2 | invocation error (argparse) |
 | 3 | environment error (missing file, ODD/RNG without rules), with a message on stderr |
+
+### 3.2 VS Code extension
+
+`vscode/` contains an extension that runs `validate.py --json` (and jing, for
+RelaxNG sources) on open and on save, and shows the results as diagnostics in
+the editor and the Problems panel. Build and install it with:
+
+```sh
+cd vscode && npm install && npx vsce package
+code --install-extension validate-schematron-*.vsix
+```
+
+Settings, requirements and details are in [vscode/README.md](vscode/README.md).
 
 ## 4. Configuration and caching
 
@@ -356,7 +369,8 @@ Decisions best not re-litigated without rereading the project's history:
 
 | Version | Date | Changes |
 |---|---|---|
-| **1.4** | 2026-11-12 | Fix: schema- and pattern-level `<let>`s are now honoured (previously ignored, so rules using them failed to evaluate and were silently skipped); fix: line/`xml:id` resolution for no-namespace and undeclared-namespace elements and for attribute/text offenders; XPath errors reported once per rule with node count and an **INCOMPLETE verdict** warning in the summary; let-wrapping precomputed at schema load; shared xml-model lookup (`href_xml_model`) reused by `validate-all.sh` |
+| **1.5** | 2026-11-12 | `--json`: machine-readable report (every violation with pattern, context, `role`, interpolated text, line and `xml:id`; XPath errors per rule; schema source), malformed documents reported as entries instead of aborting; validation separated from text reporting (text output unchanged); new **VS Code extension** in `vscode/` (§3.2) showing Schematron and jing results as editor diagnostics |
+| 1.4 | 2026-11-12 | Fix: schema- and pattern-level `<let>`s are now honoured (previously ignored, so rules using them failed to evaluate and were silently skipped); fix: line/`xml:id` resolution for no-namespace and undeclared-namespace elements and for attribute/text offenders; XPath errors reported once per rule with node count and an **INCOMPLETE verdict** warning in the summary; let-wrapping precomputed at schema load; shared xml-model lookup (`href_xml_model`) reused by `validate-all.sh` |
 | 1.3 | 2026-07-19 | `sch:value-of` in assert/report messages is now **interpolated** (evaluated in the offending node's context, with the rule's `let`s): the `-v` detail shows e.g. the exact missing/foreign sigla; the aggregate count still groups by static template |
 | **1.2** | 2026-07-17 | Schema auto-detection from `<?xml-model?>` PIs with download and caching of remote schemas (`.schema-cache/`, `--refresh`); content-based schema classification (RNG/Schematron/ODD); source flags now optional; `--version`. Matching `validate-all.sh`: auto mode without a schema argument, reusing validate.py's resolution and cache |
 | 1.1 | 2026-07-12 | `-r` route (harvesting of RelaxNG-embedded Schematron, with deduplication); fix for the namespace-serialization bug in harvesting (`cleanup_namespaces`) plus **post-harvest self-check**; `current()` support (P5 rules); malformed-document guard; empty-schema guards (ODD and RNG); exit code 3 for environment errors; **dual-mtime** cache (source + script); two-layer wrapper `validate-all.sh` |

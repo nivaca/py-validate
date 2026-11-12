@@ -45,6 +45,7 @@ Requisitos: pip install saxonche lxml
 
 import argparse
 import hashlib
+import json
 import re
 import sys
 import time
@@ -57,7 +58,7 @@ from pathlib import Path
 from lxml import etree
 from saxonche import PySaxonProcessor
 
-__version__ = "1.4"
+__version__ = "1.5"
 
 SCH_NS = 'http://purl.oclc.org/dsdl/schematron'
 S = f'{{{SCH_NS}}}'
@@ -329,7 +330,7 @@ def cargar_reglas(sch_path: Path):
                     segs = [(k, con_lets(lets, v) if k == 'exp' else v)
                             for k, v in segs]
                     tests.append((qn.localname, con_lets(lets, t.get('test')),
-                                  msg, segs))
+                                  msg, segs, t.get('role') or ''))
                 elif qn.localname != 'let':
                     avisar_una_vez(f'el:{qn.localname}',
                                    f'elemento Schematron no implementado: '
@@ -370,13 +371,25 @@ def ruta_lxml(path_q, nss):
     return re.sub(r'Q\{([^}]*)\}([^\[/]+)', paso, path_q)
 
 
-def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
+class DocumentoMalFormado(Exception):
+    def __init__(self, msg, line=None):
+        super().__init__(msg)
+        self.line = line
+
+
+def validar(doc_path: Path, nss, patterns, proc, n_lineas=None):
+    """Valida un documento y devuelve un dict con sus infracciones (cada una
+    con pattern, contexto, tipo, role, mensaje, texto interpolado, path y,
+    para las primeras `n_lineas` —todas si es None—, línea y xml:id), los
+    errores XPath agrupados por regla y el tiempo empleado."""
     exigir_archivo(doc_path, 'el documento')
     try:
         lx = etree.parse(str(doc_path))      # para números de línea
     except etree.XMLSyntaxError as e:
-        morir(f"El documento {doc_path.name} no está bien formado: {e}. "
-              f"Corrígelo antes de validar (xmllint --noout lo localiza).")
+        raise DocumentoMalFormado(
+            f"El documento {doc_path.name} no está bien formado: {e}. "
+            f"Corrígelo antes de validar (xmllint --noout lo localiza).",
+            e.lineno)
     xp = proc.new_xpath_processor()
     for p, u in nss.items():
         xp.declare_namespace(p, u)
@@ -439,34 +452,51 @@ def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
                 if path_id in ya_casados:
                     continue
                 ya_casados.add(path_id)
-                for tipo, test, msg, segs in tests:
+                for tipo, test, msg, segs, role in tests:
                     try:
                         val = en(node, xp.effective_boolean_value, test)
                     except Exception as e:
-                        errores[(msg[:50], str(e).strip())] += 1
+                        errores[(msg, ctx, str(e).strip())] += 1
                         continue
                     if val == (tipo == 'report'):
-                        infracciones.append(
-                            (path_id, msg, interpolar(node, msg, segs)))
+                        infracciones.append({
+                            'pattern': pat_id, 'context': ctx, 'type': tipo,
+                            'role': role, 'message': msg,
+                            'text': interpolar(node, msg, segs),
+                            'path': path_id, 'line': None, 'xml_id': None})
+    segundos = time.time() - t0
+    for inf in infracciones[:n_lineas]:
+        inf['line'], xid = linea_e_id(inf['path'])
+        inf['xml_id'] = None if xid == '—' else xid
+    return {
+        'file': str(doc_path),
+        'violations': infracciones,
+        'xpath_errors': [{'message': m, 'context': c, 'error': e, 'nodes': n}
+                         for (m, c, e), n in errores.items()],
+        'seconds': round(segundos, 3),
+    }
 
-    for (msg, err), n in errores.items():
-        print(f"[ERROR XPath] regla '{msg}': {err} ({n} nodos)",
-              file=sys.stderr)
-    print(f"\n== {doc_path.name} — {len(infracciones)} infracciones "
-          f"({time.time()-t0:.1f}s) ==")
+
+def informe_texto(res, verbose=False, max_list=50):
+    """Informe para el terminal (el formato de siempre)."""
+    infracciones, errores = res['violations'], res['xpath_errors']
+    for e in errores:
+        print(f"[ERROR XPath] regla '{e['message'][:50]}': {e['error']} "
+              f"({e['nodes']} nodos)", file=sys.stderr)
+    print(f"\n== {Path(res['file']).name} — {len(infracciones)} infracciones "
+          f"({res['seconds']:.1f}s) ==")
     if errores:
-        print(f"[!] {sum(errores.values())} evaluaciones fallidas en "
-              f"{len(errores)} reglas: el veredicto es INCOMPLETO")
-    for msg, n in Counter(m for _, m, _ in infracciones).most_common():
+        print(f"[!] {sum(e['nodes'] for e in errores)} evaluaciones fallidas "
+              f"en {len(errores)} reglas: el veredicto es INCOMPLETO")
+    for msg, n in Counter(i['message'] for i in infracciones).most_common():
         print(f"{n:5d}  {msg[:100]}")
     if verbose and infracciones:
         print(f"\n-- detalle (primeras {min(max_list, len(infracciones))}) --")
-        for path_q, msg, interp in infracciones[:max_list]:
-            line, xid = linea_e_id(path_q)
-            print(f"  l.{line or '?':>6}  [{xid}]  {interp[:140]}")
+        for i in infracciones[:max_list]:
+            print(f"  l.{i['line'] or '?':>6}  [{i['xml_id'] or '—'}]  "
+                  f"{i['text'][:140]}")
         if len(infracciones) > max_list:
             print(f"  ... y {len(infracciones)-max_list} más (sube --max)")
-    return len(infracciones)
 
 
 # ------------------------------------------------------------------ main
@@ -491,35 +521,60 @@ def main():
     ap.add_argument('--refresh', action='store_true',
                     help='con autodetección por xml-model: volver a '
                          'descargar el esquema aunque esté en caché')
+    ap.add_argument('--json', action='store_true',
+                    help='salida JSON por stdout (todas las infracciones, con '
+                         'línea y xml:id; ignora -v y --max); los mensajes de '
+                         'diagnóstico siguen yendo a stderr')
     args = ap.parse_args()
 
-    total = 0
+    resultados, mal_formados = [], 0
     with PySaxonProcessor(license=False) as proc:
         if args.odd:
-            sch = extraer_sch(args.odd, proc)
+            fuente, tipo = args.odd, 'odd'
         elif args.rng:
-            sch = sch_desde_rng(args.rng)
+            fuente, tipo = args.rng, 'rng'
         elif args.sch:
-            sch = args.sch
+            fuente, tipo = args.sch, 'sch'
         else:
-            local, tipo = detectar_esquema(args.docs[0], args.refresh)
+            fuente, tipo = detectar_esquema(args.docs[0], args.refresh)
             if len(args.docs) > 1:
                 print("[aviso] esquema detectado del PRIMER documento; se "
                       "aplica a todos los de esta invocación", file=sys.stderr)
-            if tipo == 'odd':
-                sch = extraer_sch(local, proc)
-            elif tipo == 'rng':
-                sch = sch_desde_rng(local)
-            else:
-                sch = local
+        if tipo == 'odd':
+            sch = extraer_sch(fuente, proc)
+        elif tipo == 'rng':
+            sch = sch_desde_rng(fuente)
+        else:
+            sch = fuente
         nss, patterns = cargar_reglas(sch)
         n_reglas = sum(len(r) for _, r in patterns)
         print(f"[esquema] {len(patterns)} patterns, {n_reglas} reglas, "
               f"prefijos: {', '.join(nss)}", file=sys.stderr)
         for d in args.docs:
-            total += validar(d, nss, patterns, proc,
-                             verbose=args.verbose, max_list=args.max)
-    sys.exit(1 if total else 0)
+            try:
+                res = validar(d, nss, patterns, proc,
+                              n_lineas=None if args.json else
+                              (args.max if args.verbose else 0))
+            except DocumentoMalFormado as e:
+                if not args.json:
+                    morir(str(e))
+                mal_formados += 1
+                resultados.append({'file': str(d), 'error': str(e),
+                                   'error_line': e.line})
+                continue
+            resultados.append(res)
+            if not args.json:
+                informe_texto(res, args.verbose, args.max)
+    if args.json:
+        json.dump({'version': __version__, 'schema': str(sch),
+                   'source': {'path': str(Path(fuente).resolve()),
+                              'type': tipo},
+                   'documents': resultados}, sys.stdout,
+                  ensure_ascii=False, indent=1)
+        print()
+    if mal_formados:
+        sys.exit(3)
+    sys.exit(1 if any(r.get('violations') for r in resultados) else 0)
 
 
 if __name__ == '__main__':

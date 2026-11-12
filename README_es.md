@@ -1,6 +1,6 @@
 # validate.py — Validación Schematron desde el terminal
 
-**Versión 1.4** (`validate.py --version`)
+**Versión 1.5** (`validate.py --version`)
 
 Validador de la capa Schematron del proyecto SMTrad. Extrae las reglas ISO
 Schematron embebidas en el ODD (`smed-schema.xml`) y las ejecuta contra uno o
@@ -65,7 +65,7 @@ desde cualquier sitio.
 ## 3. Uso
 
 ```
-python3 validate.py [-o ODD | -s SCH | -r RNG] [-v] [--max N] [--refresh] DOC.xml [...]
+python3 validate.py [-o ODD | -s SCH | -r RNG] [-v] [--max N] [--refresh] [--json] DOC.xml [...]
 ```
 
 Desde la v1.2, los flags de esquema son **opcionales**: sin ellos, el
@@ -81,6 +81,7 @@ esquema se **autodetecta** de las PIs `<?xml-model?>` del primer documento
 | `--max N` | Máximo de infractores en el detalle (defecto 50). Si hay más, el script **dice cuántos quedaron fuera** — nunca trunca en silencio |
 
 | `--refresh` | Con autodetección: volver a descargar un esquema remoto aunque esté en caché |
+| `--json` | Informe legible por máquina en stdout: todas las infracciones (pattern, contexto, assert/report, `role`, mensaje, texto interpolado, `fn:path`, línea, `xml:id`), errores XPath por regla y la fuente del esquema; ignora `-v`/`--max`. Un documento mal formado se convierte en una entrada `error` en lugar de abortar la corrida. Los mensajes de progreso siguen yendo a stderr (lo usa la extensión de VS Code, §3.2) |
 
 Las tres fuentes explícitas son mutuamente excluyentes; si no se da ninguna,
 opera la autodetección.
@@ -151,6 +152,21 @@ python3 validate.py -s smed-schema.sch ed_lat.xml || echo "hay pendientes"
 | 1 | una o más infracciones |
 | 2 | error de invocación (argparse) |
 | 3 | error de entorno (archivo inexistente, XSLT ausente, ODD/RNG sin reglas), con mensaje por stderr |
+
+### 3.2 Extensión de VS Code
+
+`vscode/` contiene una extensión que ejecuta `validate.py --json` (y jing,
+para fuentes RelaxNG) al abrir y al guardar, y muestra los resultados como
+diagnósticos en el editor y en el panel Problems. Para compilarla e
+instalarla:
+
+```sh
+cd vscode && npm install && npx vsce package
+code --install-extension validate-schematron-*.vsix
+```
+
+Ajustes, requisitos y detalles en [vscode/README.md](vscode/README.md)
+(en inglés).
 
 ## 4. Configuración y caché
 
@@ -351,7 +367,8 @@ Decisiones que conviene no re-litigar sin releer la historia del proyecto:
 
 | Versión | Fecha | Cambios |
 |---|---|---|
-| **1.4** | 2026-11-12 | Corrección: los `<let>` de schema y de pattern se respetan (antes se ignoraban, de modo que las reglas que los usaban fallaban al evaluarse y se omitían en silencio); corrección: resolución de línea/`xml:id` para elementos sin namespace o con namespace no declarado y para infractores atributo/texto; errores XPath notificados una vez por regla con recuento de nodos y aviso de **veredicto INCOMPLETO** en el resumen; envoltura de `let` precalculada al cargar el esquema; búsqueda xml-model compartida (`href_xml_model`) reutilizada por `validate-all.sh` |
+| **1.5** | 2026-11-12 | `--json`: informe legible por máquina (todas las infracciones con pattern, contexto, `role`, texto interpolado, línea y `xml:id`; errores XPath por regla; fuente del esquema), los documentos mal formados se informan como entradas en lugar de abortar; validación separada del informe de texto (salida de texto sin cambios); nueva **extensión de VS Code** en `vscode/` (§3.2) que muestra los resultados de Schematron y jing como diagnósticos en el editor |
+| 1.4 | 2026-11-12 | Corrección: los `<let>` de schema y de pattern se respetan (antes se ignoraban, de modo que las reglas que los usaban fallaban al evaluarse y se omitían en silencio); corrección: resolución de línea/`xml:id` para elementos sin namespace o con namespace no declarado y para infractores atributo/texto; errores XPath notificados una vez por regla con recuento de nodos y aviso de **veredicto INCOMPLETO** en el resumen; envoltura de `let` precalculada al cargar el esquema; búsqueda xml-model compartida (`href_xml_model`) reutilizada por `validate-all.sh` |
 | 1.3 | 2026-07-19 | `sch:value-of` en mensajes de assert/report se **interpola** (evaluado en el contexto del nodo infractor, con los `let` de la regla): el detalle `-v` muestra p. ej. las siglas exactas faltantes/foráneas; el recuento agregado sigue agrupando por plantilla estática |
 | **1.2** | 2026-07-17 | Autodetección de esquema por PI `<?xml-model?>` con descarga y caché de esquemas remotos (`.schema-cache/`, `--refresh`); clasificación del esquema por contenido (RNG/Schematron/ODD); flags de fuente ahora opcionales; `--version`. `validate-all.sh` a juego: modo auto sin argumento de esquema, reutilizando la resolución y caché de validate.py |
 | 1.1 | 2026-07-12 | Ruta `-r` (cosecha del Schematron embebido en RelaxNG, con deduplicación); corrección del bug de serialización de namespaces en la cosecha (`cleanup_namespaces`) y **self-check post-cosecha**; soporte de `current()` (reglas P5); guardián de documentos mal formados; guardianes anti-esquema-vacío (ODD y RNG); código de salida 3 para errores de entorno; caché por **doble mtime** (fuente + script); wrapper bicapa `validate-all.sh` |

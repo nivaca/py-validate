@@ -1,0 +1,140 @@
+{
+  "name": "validate-schematron",
+  "displayName": "Schematron Validator (validate.py)",
+  "description": "Validates XML/TEI documents against Schematron rules (from a .sch, an ODD or a RelaxNG with embedded rules) and, optionally, RelaxNG structure via jing. Results appear as diagnostics in the editor and the Problems panel.",
+  "version": "0.1.0",
+  "publisher": "nivaca",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://codeberg.org/nivaca/validate"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters"
+  ],
+  "keywords": [
+    "xml",
+    "tei",
+    "schematron",
+    "relaxng",
+    "validation"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:xml"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "schematron.validate",
+        "title": "Validate Current File",
+        "category": "Schematron"
+      },
+      {
+        "command": "schematron.clear",
+        "title": "Clear Diagnostics",
+        "category": "Schematron"
+      },
+      {
+        "command": "schematron.showOutput",
+        "title": "Show Output",
+        "category": "Schematron"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "schematron.validate",
+          "when": "editorLangId == xml"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Schematron Validator",
+      "properties": {
+        "schematron.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Python interpreter with saxonche and lxml installed (e.g. a virtualenv's bin/python).",
+          "scope": "machine-overridable"
+        },
+        "schematron.validatorPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to validate.py. Empty: use the copy bundled with the extension. Point it at your own checkout to use the ODD route (-o), which needs odds/extract-isosch.xsl next to the script.",
+          "scope": "machine-overridable"
+        },
+        "schematron.schema": {
+          "type": "string",
+          "default": "",
+          "description": "Schema to validate against (relative to the workspace folder). Empty: auto-detect from the document's <?xml-model?> processing instructions.",
+          "scope": "resource"
+        },
+        "schematron.schemaType": {
+          "type": "string",
+          "enum": [
+            "rng",
+            "sch",
+            "odd"
+          ],
+          "enumDescriptions": [
+            "RelaxNG generated from an ODD: its embedded Schematron is harvested (-r)",
+            "ISO Schematron file, used as is (-s)",
+            "ODD with embedded Schematron, extracted with extract-isosch.xsl (-o)"
+          ],
+          "default": "rng",
+          "description": "Type of the file in schematron.schema (ignored when auto-detecting).",
+          "scope": "resource"
+        },
+        "schematron.validateOnOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Validate XML files when they are opened.",
+          "scope": "resource"
+        },
+        "schematron.validateOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Validate XML files when they are saved.",
+          "scope": "resource"
+        },
+        "schematron.relaxng.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Also check structure with jing when the schema source is a RelaxNG file.",
+          "scope": "resource"
+        },
+        "schematron.jingPath": {
+          "type": "string",
+          "default": "jing",
+          "description": "jing executable for the RelaxNG layer.",
+          "scope": "machine-overridable"
+        },
+        "schematron.timeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 5,
+          "description": "Abort a validation run after this many seconds.",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "bundle-validator": "node scripts/bundle-validator.js",
+    "vscode:prepublish": "npm run compile && npm run bundle-validator",
+    "test": "npm run compile && node --test out/test/*.test.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.4.0"
+  }
+}
