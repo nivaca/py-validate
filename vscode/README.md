@@ -5,6 +5,8 @@ Validates XML/TEI documents against Schematron rules using
 RelaxNG structure with jing. Results appear as squiggles in the editor and in
 the Problems panel.
 
+![The extension on a TEI document: errors underlined, the message of one, the Problems panel and the count in the status bar](https://codeberg.org/nivaca/validate/raw/branch/main/docs/img/vscode_dark.png)
+
 ## What it does
 
 - **When it runs:** as you type (once typing pauses for

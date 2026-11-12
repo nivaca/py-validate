@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A small TEI-like RelaxNG schema with Schematron rules embedded in it,
+     the way schemas generated from a TEI ODD carry them. It is the example
+     used by tools/screenshots.py: validate.py harvests the sch:pattern
+     elements (validate.py -r schema.rng), jing checks the structure. -->
+<grammar xmlns="http://relaxng.org/ns/structure/1.0"
+         xmlns:sch="http://purl.oclc.org/dsdl/schematron"
+         ns="http://www.tei-c.org/ns/1.0">
+
+  <sch:ns prefix="tei" uri="http://www.tei-c.org/ns/1.0"/>
+
+  <start>
+    <element name="TEI">
+      <element name="teiHeader">
+        <element name="fileDesc">
+          <element name="titleStmt">
+            <element name="title"><text/></element>
+          </element>
+        </element>
+      </element>
+      <element name="text">
+        <element name="body">
+          <oneOrMore><ref name="div"/></oneOrMore>
+        </element>
+      </element>
+    </element>
+  </start>
+
+  <define name="div">
+    <element name="div">
+      <optional><attribute name="id" ns="http://www.w3.org/XML/1998/namespace"/></optional>
+      <optional><element name="head"><ref name="inline"/></element></optional>
+      <oneOrMore><ref name="p"/></oneOrMore>
+      <sch:pattern id="div-needs-id">
+        <sch:rule context="tei:div">
+          <sch:assert test="@xml:id">Every <sch:name/> needs an xml:id, so that notes and references can point to it.</sch:assert>
+        </sch:rule>
+      </sch:pattern>
+    </element>
+  </define>
+
+  <define name="p">
+    <element name="p">
+      <optional><attribute name="corresp"/></optional>
+      <ref name="inline"/>
+    </element>
+  </define>
+
+  <define name="inline">
+    <mixed>
+      <zeroOrMore>
+        <choice><ref name="persName"/><ref name="foreign"/><ref name="note"/></choice>
+      </zeroOrMore>
+    </mixed>
+  </define>
+
+  <define name="persName">
+    <element name="persName">
+      <optional><attribute name="ref"/></optional>
+      <ref name="inline"/>
+      <sch:pattern id="persName-needs-ref">
+        <sch:rule context="tei:persName">
+          <sch:assert test="@ref"><sch:name/> “<sch:value-of select="normalize-space(.)"/>” has no @ref to the index of persons.</sch:assert>
+        </sch:rule>
+      </sch:pattern>
+    </element>
+  </define>
+
+  <define name="foreign">
+    <element name="foreign">
+      <optional><attribute name="lang" ns="http://www.w3.org/XML/1998/namespace"/></optional>
+      <ref name="inline"/>
+    </element>
+  </define>
+
+  <define name="note">
+    <element name="note">
+      <attribute name="id" ns="http://www.w3.org/XML/1998/namespace"/>
+      <optional><attribute name="ana"/></optional>
+      <mixed>
+        <zeroOrMore>
+          <choice><element name="ab"><ref name="inline"/></element><ref name="foreign"/></choice>
+        </zeroOrMore>
+      </mixed>
+      <sch:pattern id="note-content">
+        <sch:rule context="tei:note[not(@ana = 'fn')]">
+          <sch:assert test="tei:ab">A <sch:name/> must contain at least one ab (unless ana="fn").</sch:assert>
+          <sch:report test="text()[normalize-space()]">A <sch:name/> (unless ana="fn") must not contain loose text; wrap “<sch:value-of select="normalize-space(string-join(text(), ' '))"/>” in an ab.</sch:report>
+        </sch:rule>
+      </sch:pattern>
+    </element>
+  </define>
+
+  <sch:pattern id="corresp-targets">
+    <sch:rule context="*[@corresp]">
+      <sch:report test="@corresp = '#'"><sch:name/> has corresp="#", an empty reference: it should point to an xml:id.</sch:report>
+      <sch:report test="starts-with(@corresp, '#') and string-length(@corresp) gt 1
+                        and not(//*[@xml:id = substring-after(current()/@corresp, '#')])">corresp="<sch:value-of select="@corresp"/>" points to no xml:id in this document.</sch:report>
+    </sch:rule>
+  </sch:pattern>
+
+</grammar>

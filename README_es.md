@@ -16,6 +16,33 @@ estructuralmente vacías que invalidan el esquema entero. Este script elimina
 el primero por diseño (lista todo, o avisa exactamente cuántos quedan fuera),
 y hace visibles los otros dos al dar siempre un recuento total verificable.
 
+## Capturas de pantalla
+
+`validate.py` y `validate-all.sh` en el terminal, sobre el ejemplo de
+[`docs/example/`](docs/example/) (un texto TEI breve con errores
+deliberados, y un esquema RelaxNG pequeño con reglas Schematron embebidas):
+
+![validate.py y validate-all.sh en el terminal](docs/img/cli.png)
+
+La extensión de VS Code (§3.2) sobre el mismo documento: los errores
+subrayados, el mensaje de uno de ellos, todos en el panel Problems con la
+capa que encontró cada uno (Schematron o RelaxNG), y el recuento en la barra
+de estado:
+
+![La extensión de VS Code, tema oscuro](docs/img/vscode_dark.png)
+
+y en un tema claro:
+
+![La extensión de VS Code, tema claro](docs/img/vscode_light.png)
+
+Las capturas las hace [`tools/screenshots.py`](tools/screenshots.py), sin
+mostrar nada en pantalla y sin tocar tu configuración; su docstring indica
+lo que necesita:
+
+```sh
+python3 tools/screenshots.py --python ~/.venvs/schematron/bin/python
+```
+
 ---
 
 ## 1. Requisitos

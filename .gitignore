@@ -6,3 +6,5 @@ bak/
 .schema-cache/
 .venv/
 test.xml
+# derived from docs/example/schema.rng when validating the example
+*.harvested.sch

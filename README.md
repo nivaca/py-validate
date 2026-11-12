@@ -17,6 +17,32 @@ design (it lists everything, or states exactly how many items were left
 out), and makes the other two visible by always reporting a verifiable
 total count.
 
+## Screenshots
+
+`validate.py` and `validate-all.sh` in the terminal, on the example in
+[`docs/example/`](docs/example/) (a short TEI text with deliberate mistakes,
+and a small RelaxNG schema with Schematron rules embedded in it):
+
+![validate.py and validate-all.sh in the terminal](docs/img/cli.png)
+
+The VS Code extension (§3.2) on the same document: the errors underlined,
+the message of one of them, all of them in the Problems panel with the layer
+that found each (Schematron or RelaxNG), and the count in the status bar:
+
+![The VS Code extension, dark theme](docs/img/vscode_dark.png)
+
+and in a light theme:
+
+![The VS Code extension, light theme](docs/img/vscode_light.png)
+
+The screenshots are made by [`tools/screenshots.py`](tools/screenshots.py),
+out of sight and without touching your own settings; its docstring lists
+what it needs:
+
+```sh
+python3 tools/screenshots.py --python ~/.venvs/schematron/bin/python
+```
+
 ---
 
 ## 1. Requirements
