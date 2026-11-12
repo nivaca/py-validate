@@ -1,4 +1,6 @@
-# validate.py — Validación Schematron desde el terminal
+# validate.py — Validación Schematron de documentos TEI, en el terminal y en VS Code
+
+*(English: [README.md](README.md))*
 
 **Versión 1.8** (`validate.py --version`)
 
@@ -7,6 +9,24 @@ Schematron embebidas en el ODD (`smed-schema.xml`) y las ejecuta contra uno o
 más documentos TEI con Saxon (XPath 3.1), produciendo un informe completo —
 sin el tope de visualización de oXygen — con recuento por regla y, en modo
 detallado, número de línea y `xml:id` de cada infractor.
+
+- **La línea de órdenes** (`validate.py`) ejecuta las reglas Schematron del
+  esquema de un documento (un ODD, un archivo ISO Schematron o un RelaxNG
+  con las reglas embebidas), que encuentra por sí sola en el
+  `<?xml-model?>` del documento. **`validate-all.sh`** añade la capa
+  estructural, RelaxNG con jing, y da un solo veredicto para las dos. Véase
+  [Uso](#3-uso).
+- **La extensión de VS Code** (`vscode/`) muestra los mismos resultados en
+  el editor, **mientras se escribe**: los errores subrayados en el texto,
+  sus mensajes al pasar el puntero, todos ellos en el panel Problemas
+  (Schematron, RelaxNG y buena formación), y el recuento en la barra de
+  estado. Descarga el `.vsix` de la última versión publicada
+  ([Codeberg](https://codeberg.org/nivaca/validate/releases) o
+  [GitHub](https://github.com/nivaca/validate/releases)) e instálalo con
+  `code --install-extension validate-schematron-*.vsix`. Véase
+  [Extensión de VS Code](#32-extensión-de-vs-code).
+
+Cómo se hizo se cuenta en [`docs/DESCRIPCIÓN_es.md`](docs/DESCRIPCIÓN_es.md).
 
 **Por qué existe.** oXygen presenta tres modos de fallo silencioso
 documentados en la historia de este proyecto: el tope de *validation
@@ -183,14 +203,38 @@ python3 validate.py -s smed-schema.sch ed_lat.xml || echo "hay pendientes"
 
 ### 3.2 Extensión de VS Code
 
-`vscode/` contiene una extensión que ejecuta `validate.py --json` (y jing,
-para fuentes RelaxNG) al abrir y al guardar, y muestra los resultados como
-diagnósticos en el editor y en el panel Problems. Para compilarla e
-instalarla:
+`vscode/` contiene una extensión para Visual Studio Code que ejecuta
+`validate.py --json`, y jing cuando el esquema es RelaxNG, y muestra los
+resultados como diagnósticos en el editor y en el panel Problemas:
+
+- **Cuándo:** mientras se escribe (cuando la escritura se detiene medio
+  segundo, un ajuste), al abrir y al guardar, en cada archivo `.xml` con un
+  `<?xml-model?>`. El texto sin guardar se valida a partir de una copia
+  temporal privada; tu archivo nunca se escribe.
+- **Qué se ve:** cada error subrayado, con su mensaje al pasar el puntero y
+  su capa (**Schematron**, **RelaxNG**, o **XML** cuando el documento no
+  está bien formado); un elemento mal escrito se marca donde se abrió. La
+  barra de estado muestra el resultado del archivo actual: una marca cuando
+  está limpio, el número de problemas, o "failed" cuando la validación no
+  pudo ejecutarse.
+- **Órdenes** (Ctrl+Shift+P, "Schematron"): *Validate Current File*,
+  *Refresh Schema* (volver a descargar un esquema remoto que cambió),
+  *Select Python Interpreter…*, *Show Output* y *Clear Diagnostics*.
+
+**Instalación:** descarga `validate-schematron-*.vsix` de la última versión
+publicada ([Codeberg](https://codeberg.org/nivaca/validate/releases) o
+[GitHub](https://github.com/nivaca/validate/releases)) y luego
+
+```sh
+code --install-extension validate-schematron-*.vsix
+```
+
+e indica en `schematron.pythonPath` un Python que tenga saxonche y lxml
+(la extensión ofrece elegirlo si hace falta). Lleva su propia copia de
+`validate.py`. Para compilarla desde el código fuente:
 
 ```sh
 cd vscode && npm install && npx vsce package
-code --install-extension validate-schematron-*.vsix
 ```
 
 Ajustes, requisitos y detalles en [vscode/README.md](vscode/README.md)
