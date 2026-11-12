@@ -10,3 +10,4 @@ node_modules/**
 **/.schema-cache/**
 # documents kept here for manual testing never belong in the package
 **/*.xml
+images/*.svg

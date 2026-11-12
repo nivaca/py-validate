@@ -2,8 +2,13 @@
   "name": "validate-schematron",
   "displayName": "Schematron Validator (validate.py)",
   "description": "Validates XML/TEI documents against Schematron rules (from a .sch, an ODD or a RelaxNG with embedded rules) and, optionally, RelaxNG structure via jing. Results appear as diagnostics in the editor and the Problems panel.",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "nivaca",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#1e3a5f",
+    "theme": "dark"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -45,7 +50,7 @@
       },
       {
         "command": "schematron.selectInterpreter",
-        "title": "Select Python Interpreter\u2026",
+        "title": "Select Python Interpreter…",
         "category": "Schematron"
       }
     ],

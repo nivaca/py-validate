@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Schematron Validator icon: an XML tag "</>" whose slash is a check
+       mark, above the red squiggle the extension draws under problems. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e3a5f"/>
+      <stop offset="1" stop-color="#0b2233"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="86,64 38,113 86,162" stroke="#e2e8f0" stroke-width="22"/>
+    <polyline points="170,64 218,113 170,162" stroke="#e2e8f0" stroke-width="22"/>
+    <polyline points="102,116 121,135 154,90" stroke="#4ade80" stroke-width="21"/>
+    <path d="M66 204 q7 -12 14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0"
+          stroke="#f87171" stroke-width="10"/>
+  </g>
+</svg>
