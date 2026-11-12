@@ -157,6 +157,12 @@ export interface Failure {
   interpreter: boolean;
 }
 
+/** URL that validate.py downloaded in this run ("[descarga] URL" on
+ *  stderr), if any. */
+export function downloadedUrl(stderr: string): string | undefined {
+  return /^\[descarga\] (\S+)/m.exec(stderr)?.[1];
+}
+
 /** Best explanation from validate.py's stderr when it produced no JSON
  *  (environment errors, exit code 3). `python` is the interpreter used. */
 export function explainFailure(stderr: string, python: string): Failure {

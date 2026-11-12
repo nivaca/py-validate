@@ -10,11 +10,12 @@
 //   xvfb-run -a npm run test:integration
 
 import * as fs from 'fs';
+import * as http from 'http';
 import * as os from 'os';
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
 
-const RNG = `<grammar xmlns="http://relaxng.org/ns/structure/1.0"
+const rng = (max: number) => `<grammar xmlns="http://relaxng.org/ns/structure/1.0"
          xmlns:sch="http://purl.oclc.org/dsdl/schematron"
          ns="http://www.tei-c.org/ns/1.0">
   <sch:ns prefix="tei" uri="http://www.tei-c.org/ns/1.0"/>
@@ -22,7 +23,7 @@ const RNG = `<grammar xmlns="http://relaxng.org/ns/structure/1.0"
     <element name="TEI">
       <sch:pattern id="max-p">
         <sch:rule context="tei:TEI">
-          <sch:assert test="count(tei:p) le 2">A <sch:name/> may contain at most 2 p, found <sch:value-of select="count(tei:p)"/></sch:assert>
+          <sch:assert test="count(tei:p) le ${max}">A <sch:name/> may contain at most ${max} p, found <sch:value-of select="count(tei:p)"/></sch:assert>
         </sch:rule>
       </sch:pattern>
       <oneOrMore><element name="p"><zeroOrMore><choice><text/><element name="note"><text/></element></choice></zeroOrMore></element></oneOrMore>
@@ -42,7 +43,28 @@ async function main() {
   fs.mkdirSync(ws);
   fs.mkdirSync(path.join(userData, 'User'), { recursive: true });
 
-  fs.writeFileSync(path.join(ws, 'schema.rng'), RNG);
+  fs.writeFileSync(path.join(ws, 'schema.rng'), rng(2));
+
+  // 4. a schema referenced by URL, served from here; the test edits the
+  //    served file to check that Refresh Schema picks up the new version
+  const served = path.join(root, 'served');
+  fs.mkdirSync(served);
+  fs.writeFileSync(path.join(served, 'remote.rng'), rng(2));
+  fs.writeFileSync(path.join(served, 'remote-max1.rng'), rng(1));
+  const server = http.createServer((req, res) => {
+    const f = path.join(served, path.basename(req.url ?? ''));
+    if (!fs.existsSync(f)) { res.writeHead(404).end(); return; }
+    res.writeHead(200, { 'Content-Type': 'application/xml' }).end(fs.readFileSync(f));
+  });
+  await new Promise<void>(r => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as { port: number }).port;
+  fs.writeFileSync(path.join(ws, 'remote.xml'),
+    PI.replace('href="schema.rng"', `href="http://127.0.0.1:${port}/remote.rng"`) +
+    `\n<TEI xmlns="http://www.tei-c.org/ns/1.0">\n<p>a</p>\n<p>b</p>\n</TEI>\n`);
+
+  // validate.py caches downloads next to the bundled copy; start clean
+  const cache = path.resolve(__dirname, '..', '..', '..', 'validator', '.schema-cache');
+  fs.rmSync(cache, { recursive: true, force: true });
   // 1. well-formed; 3 p (Schematron) + <bogus/> (RelaxNG), on separate lines
   fs.writeFileSync(path.join(ws, 'invalid.xml'),
     `${PI}\n<TEI xmlns="http://www.tei-c.org/ns/1.0">\n<p>a</p>\n<p>b</p>\n<p>c<bogus/></p>\n</TEI>\n`);
@@ -69,6 +91,7 @@ async function main() {
         SCHEMATRON_IT_WS: ws,
         SCHEMATRON_IT_JING: process.env.JING ? '1' : '',
         SCHEMATRON_IT_EXTRA: process.env.EXTRA_DOCS || '',
+        SCHEMATRON_IT_SERVED: served,
       },
       launchArgs: [ws, '--user-data-dir', userData,
                    '--extensions-dir', path.join(root, 'extensions'),
@@ -77,6 +100,8 @@ async function main() {
                    ...(process.platform === 'linux' ? ['--ozone-platform=x11'] : [])],
     });
   } finally {
+    server.close();
+    fs.rmSync(cache, { recursive: true, force: true });
     fs.rmSync(root, { recursive: true, force: true });
   }
 }

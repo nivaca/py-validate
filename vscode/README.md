@@ -79,6 +79,24 @@ Changing any `schematron.*` setting re-validates the open files.
 The **Schematron** output channel (**Schematron: Show Output**) logs every
 command run and its stderr.
 
+## Commands
+
+Open the Command Palette (Ctrl+Shift+P) and type "Schematron":
+
+| Command | Use it to |
+|---|---|
+| Validate Current File | Validate now, unsaved changes included, or a file without `<?xml-model?>` |
+| Refresh Schema | Re-download the active file's schema after it changed upstream, then re-validate the open files |
+| Show Output | See exactly what ran and any error output |
+| Select Python Interpreter… | Choose the Python that has saxonche and lxml |
+| Clear Diagnostics | Remove all underlines and Problems entries |
+
+**About Refresh Schema:** a schema referenced by URL is downloaded once and
+then cached, so later changes to it (for example a new commit to the schema
+repository on GitHub) are not seen until you refresh it. A local schema file
+needs no refresh: changes to it are picked up automatically, and the command
+says so.
+
 ## Building
 
 ```sh

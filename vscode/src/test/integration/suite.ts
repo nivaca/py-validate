@@ -106,6 +106,31 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('workbench.action.files.revert');
   });
 
+  await check('Refresh Schema: a changed remote schema is re-downloaded and applied', async () => {
+    const served = process.env.SCHEMATRON_IT_SERVED!;
+    const doc = await open('remote.xml');
+    await sleep(2500);                                // first run downloads (max 2 p): valid
+    assert.equal(ours(doc.uri).length, 0, `expected no problems, got${describe(ours(doc.uri))}`);
+    // the schema changes upstream: now at most 1 p
+    fs.copyFileSync(path.join(served, 'remote-max1.rng'), path.join(served, 'remote.rng'));
+    await vscode.commands.executeCommand('schematron.validate');
+    await sleep(2500);
+    assert.equal(ours(doc.uri).length, 0, 'without a refresh the cached schema should still apply');
+    const res = await vscode.commands.executeCommand<{ status: string; url?: string }>('schematron.refreshSchema');
+    console.log(`    refresh result: ${JSON.stringify(res)}`);
+    assert.equal(res?.status, 'refreshed');
+    const ds = await waitFor(doc.uri, d => d.length > 0, 'diagnostics from the refreshed schema');
+    console.log(`    diagnostics:${describe(ds)}`);
+    assert.match(ds[0].message, /at most 1 p, found 2/);
+    assertVisible(ds);
+  });
+
+  await check('Refresh Schema on a local schema says there is nothing to download', async () => {
+    await open('invalid.xml');
+    const res = await vscode.commands.executeCommand<{ status: string }>('schematron.refreshSchema');
+    assert.equal(res?.status, 'local');
+  });
+
   for (const f of (process.env.SCHEMATRON_IT_EXTRA || '').split(':').filter(Boolean)) {
     await check(`extra document ${path.basename(f)} (diagnostics printed, not checked)`, async () => {
       const doc = await vscode.workspace.openTextDocument(f);

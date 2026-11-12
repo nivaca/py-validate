@@ -6,7 +6,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import {
   ValidateOutput, explainFailure, itemsFromJing, itemsFromMalformed, itemsFromValidate,
-  severityFor, underline,
+  severityFor, underline, downloadedUrl,
 } from '../parse';
 
 test('severityFor maps Schematron roles', () => {
@@ -135,4 +135,10 @@ test('underline never yields an empty range', () => {
   assert.deepEqual(underline('    </note>   '), [4, 11]);
   // column past the end, no "<" before it
   assert.deepEqual(underline('  plain text', 40), [2, 12]);
+});
+
+test('downloadedUrl finds the URL validate.py downloaded', () => {
+  assert.equal(downloadedUrl('[xml-model] esquema detectado: https://x/s.rng\n' +
+                             '[descarga] https://x/s.rng\n[esquema] 3 patterns'), 'https://x/s.rng');
+  assert.equal(downloadedUrl('[caché] https://x/s.rng ya descargado -> a-s.rng'), undefined);
 });

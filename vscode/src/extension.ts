@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
-  Item, ValidateOutput, explainFailure, itemsFromJing, itemsFromValidate, underline,
+  Item, ValidateOutput, downloadedUrl, explainFailure, itemsFromJing, itemsFromValidate,
+  underline,
 } from './parse';
 
 let diagnostics: vscode.DiagnosticCollection;
@@ -62,6 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('schematron.clear', () => diagnostics.clear()),
     vscode.commands.registerCommand('schematron.showOutput', () => output.show()),
     vscode.commands.registerCommand('schematron.selectInterpreter', chooseInterpreter),
+    vscode.commands.registerCommand('schematron.refreshSchema', refreshSchema),
     vscode.workspace.onDidOpenTextDocument(doc => {
       if (cfg(doc).get<boolean>('validateOnOpen')) { void validate(doc, false); }
     }),
@@ -159,7 +161,11 @@ function resolveSetting(doc: vscode.TextDocument, p: string): string {
   return path.resolve(folder ? folder.uri.fsPath : path.dirname(doc.uri.fsPath), p);
 }
 
-async function validate(doc: vscode.TextDocument, manual: boolean) {
+/** Validates `doc` and shows the results. `refresh` re-downloads a remote
+ *  schema first (validate.py --refresh). Returns validate.py's run, or
+ *  undefined when the document was skipped or a newer run superseded it. */
+async function validate(doc: vscode.TextDocument, manual: boolean,
+                        refresh = false): Promise<RunResult | undefined> {
   if (!shouldValidate(doc, manual)) { return; }
   const key = doc.uri.toString();
   cancel(key);
@@ -189,7 +195,8 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
     fs.writeFileSync(input, doc.getText(), 'utf8');
   }
   try {
-    const args = [validator, '--json', ...(schema ? [schemaFlag, schema] : []),
+    const args = [validator, '--json', ...(refresh ? ['--refresh'] : []),
+                  ...(schema ? [schemaFlag, schema] : []),
                   ...(tmpDir ? ['--as', file] : []), input];
     const r = await run(python, args, cwd, key, timeoutMs);
     if (generation.get(key) !== gen) { return; }        // superseded
@@ -233,6 +240,7 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
       ? { state: 'failed', message: failedMessage, at: new Date() }
       : { state: 'done', errors: count('error'), warnings: count('warning'),
           infos: count('info'), relaxng: relaxngRan, at: new Date() });
+    return r;
   } finally {
     if (tmpDir) { fs.rmSync(tmpDir, { recursive: true, force: true }); }
   }
@@ -296,6 +304,44 @@ async function relaxng(doc: vscode.TextDocument, rng: string, file: string,
               message: `jing failed (exit ${r.code}): ${(r.stderr || r.stdout).trim().split('\n').pop()}` }];
   }
   return itemsFromJing(r.stdout + '\n' + r.stderr, file, dropFatal);
+}
+
+export type RefreshResult =
+  | { status: 'refreshed'; url: string }
+  | { status: 'local' | 'failed' | 'no-document' };
+
+/** Schematron: Refresh Schema. Re-downloads the active document's remote
+ *  schema (the cached copy is otherwise kept forever), which also
+ *  regenerates the harvested rules, then re-validates every open file, as
+ *  others may share the schema. A local schema needs no refresh: changes
+ *  to it are picked up automatically. Returns the outcome (used by tests). */
+async function refreshSchema(): Promise<RefreshResult> {
+  const doc = vscode.window.activeTextEditor?.document;
+  if (!doc || doc.languageId !== 'xml' || doc.uri.scheme !== 'file') {
+    vscode.window.showWarningMessage('Schematron: open the XML document whose schema you want to refresh.');
+    return { status: 'no-document' };
+  }
+  const name = path.basename(doc.uri.fsPath);
+  const r = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: `Schematron: refreshing the schema of ${name}…` },
+    () => validate(doc, true, true));
+  if (!r || r.spawnError || !r.stdout.trim().startsWith('{')) {
+    vscode.window.showErrorMessage(
+      'Schematron: the schema could not be refreshed. See the status bar or Schematron: Show Output.');
+    return { status: 'failed' };
+  }
+  const url = downloadedUrl(r.stderr);
+  if (!url) {
+    vscode.window.showInformationMessage(
+      `Schematron: the schema of ${name} is a local file, so there is nothing to download; ` +
+      `changes to it are picked up automatically.`);
+    return { status: 'local' };
+  }
+  for (const other of vscode.workspace.textDocuments) {
+    if (other !== doc) { void validate(other, false); }
+  }
+  vscode.window.showInformationMessage(`Schematron: schema refreshed from ${url}`);
+  return { status: 'refreshed', url };
 }
 
 async function notifyInterpreter(message: string) {
