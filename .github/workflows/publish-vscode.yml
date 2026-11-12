@@ -1,0 +1,73 @@
+# Publishes the VS Code extension (vscode/) to the Visual Studio Marketplace
+# with Trusted Publishing (OpenID Connect), so no access token is stored
+# anywhere.
+#
+# One-time setup:
+#   1. On https://marketplace.visualstudio.com/manage, publisher "nivaca":
+#      add a Trusted Publishing policy for the GitHub repository
+#      nivaca/validate and the workflow file publish-vscode.yml.
+#   2. On GitHub, Settings > Secrets and variables > Actions > Variables:
+#      add VSCE_TRUSTED_PUBLISHING with the value true.
+# Until then the workflow only tests and packages the extension.
+#
+# It runs when a release tag is pushed: vscode-v* (the extension) or v*
+# (validate.py, whose releases ship the extension too), or by hand from the
+# Actions tab. A version already on the Marketplace is skipped, so a tag
+# that did not change the extension does no harm.
+#
+# Optional: to publish to Open VSX too (the store of VSCodium), add a
+# repository secret OVSX_PAT with an access token from https://open-vsx.org.
+
+name: Publish VS Code extension
+
+on:
+  push:
+    tags: ["vscode-v*", "v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write  # (Trusted Publishing)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    defaults:
+      run:
+        working-directory: vscode
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vscode/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Check that a vscode-v* tag matches package.json
+        if: startsWith(github.ref_name, 'vscode-v')
+        run: |
+          version="vscode-v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME, but package.json says $version"
+            exit 1
+          fi
+
+      - name: Package
+        run: npx vsce package -o extension.vsix
+
+      - name: Publish to the Visual Studio Marketplace
+        if: vars.VSCE_TRUSTED_PUBLISHING == 'true'
+        run: npx vsce publish --oidc --skip-duplicate --packagePath extension.vsix
+
+      - name: Publish to Open VSX
+        if: env.OVSX_PAT != ''
+        run: npx --yes ovsx publish extension.vsix --skip-duplicate

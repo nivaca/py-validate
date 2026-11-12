@@ -8,3 +8,5 @@ bak/
 test.xml
 # derived from docs/example/schema.rng when validating the example
 *.harvested.sch
+# release bundles (tools/bundle-zip.py)
+dist/

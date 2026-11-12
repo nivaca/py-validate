@@ -2,7 +2,7 @@
   "name": "validate-schematron",
   "displayName": "Schematron Validator (validate.py)",
   "description": "Validates XML/TEI documents against Schematron rules (from a .sch, an ODD or a RelaxNG with embedded rules) and, optionally, RelaxNG structure via jing. Results appear as diagnostics in the editor and the Problems panel.",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "publisher": "nivaca",
   "icon": "images/icon.png",
   "galleryBanner": {
@@ -168,7 +168,7 @@
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^3.1.0",
-    "@vscode/vsce": "^3.2.0",
+    "@vscode/vsce": "^4.1.0",
     "typescript": "^5.4.0"
   }
 }
