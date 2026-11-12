@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { spawn, ChildProcess } from 'child_process';
+import * as os from 'os';
 import * as path from 'path';
 import {
   Item, ValidateOutput, explainFailure, itemsFromJing, itemsFromValidate,
@@ -14,6 +15,9 @@ let extensionRoot: string;
 const running = new Map<string, Set<ChildProcess>>();
 const generation = new Map<string, number>();
 let jingMissingLogged = false;
+/** The interpreter notification is shown once until the settings change,
+ *  not on every save. */
+let interpreterNotified = false;
 
 interface RunResult { code: number | null; stdout: string; stderr: string; spawnError?: NodeJS.ErrnoException }
 
@@ -39,6 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand('schematron.clear', () => diagnostics.clear()),
     vscode.commands.registerCommand('schematron.showOutput', () => output.show()),
+    vscode.commands.registerCommand('schematron.selectInterpreter', chooseInterpreter),
     vscode.workspace.onDidOpenTextDocument(doc => {
       if (cfg(doc).get<boolean>('validateOnOpen')) { void validate(doc, false); }
     }),
@@ -50,12 +55,23 @@ export function activate(context: vscode.ExtensionContext) {
       diagnostics.delete(doc.uri);
     }),
     vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('schematron')) { jingMissingLogged = false; }
+      if (!e.affectsConfiguration('schematron')) { return; }
+      jingMissingLogged = false;
+      interpreterNotified = false;
+      revalidateOpen();
     }),
   );
 
   for (const doc of vscode.workspace.textDocuments) {
     if (cfg(doc).get<boolean>('validateOnOpen')) { void validate(doc, false); }
+  }
+}
+
+/** Re-validate open XML documents that already have results (or are
+ *  candidates), e.g. after a settings change. */
+function revalidateOpen() {
+  for (const doc of vscode.workspace.textDocuments) {
+    void validate(doc, false);
   }
 }
 
@@ -133,13 +149,19 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
     let items: Item[];
     let parsed: ValidateOutput | undefined;
     if (r.spawnError) {
-      items = [failure(`Could not run ${python}: ${r.spawnError.message}. Check schematron.pythonPath.`)];
+      const msg = `Could not run the Python interpreter "${python}" ` +
+        `(${r.spawnError.code ?? r.spawnError.message}). Set schematron.pythonPath ` +
+        `to a Python that has saxonche and lxml.`;
+      items = [failure(msg)];
+      void notifyInterpreter(msg);
     } else {
       try {
         parsed = JSON.parse(r.stdout) as ValidateOutput;
         items = itemsFromValidate(parsed, file);
       } catch {
-        items = [failure(explainFailure(r.stderr))];
+        const f = explainFailure(r.stderr, python);
+        items = [failure(f.message)];
+        if (f.interpreter) { void notifyInterpreter(f.message); }
       }
     }
 
@@ -177,6 +199,49 @@ async function relaxng(doc: vscode.TextDocument, rng: string, file: string,
               message: `jing failed (exit ${r.code}): ${(r.stderr || r.stdout).trim().split('\n').pop()}` }];
   }
   return itemsFromJing(r.stdout + '\n' + r.stderr, file);
+}
+
+async function notifyInterpreter(message: string) {
+  if (interpreterNotified) { return; }
+  interpreterNotified = true;
+  const choose = 'Choose Interpreter…', settings = 'Open Settings';
+  const pick = await vscode.window.showErrorMessage(`Schematron: ${message}`, choose, settings);
+  if (pick === choose) {
+    await chooseInterpreter();
+  } else if (pick === settings) {
+    await vscode.commands.executeCommand('workbench.action.openSettings', 'schematron.pythonPath');
+  }
+}
+
+/** Lets the user pick a Python executable, checks that it can import
+ *  saxonche and lxml, and saves it as the user-level schematron.pythonPath. */
+async function chooseInterpreter() {
+  const venvs = path.join(os.homedir(), '.venvs');
+  const uris = await vscode.window.showOpenDialog({
+    title: 'Python interpreter with saxonche and lxml',
+    openLabel: 'Use This Interpreter',
+    canSelectMany: false,
+    defaultUri: vscode.Uri.file(venvs),
+  });
+  const python = uris?.[0]?.fsPath;
+  if (!python) { return; }
+  const r = await run(python, ['-c', 'import saxonche, lxml'], os.homedir(),
+                      'interpreter-check', 30000);
+  if (r.spawnError || r.code !== 0) {
+    const why = r.spawnError
+      ? `it could not be run (${r.spawnError.code ?? r.spawnError.message})`
+      : 'it cannot import saxonche and lxml';
+    const again = 'Choose Another…';
+    const pick = await vscode.window.showErrorMessage(
+      `Schematron: "${python}" was not saved because ${why}. ` +
+      `Install them with: "${python}" -m pip install saxonche lxml`, again);
+    if (pick === again) { await chooseInterpreter(); }
+    return;
+  }
+  // Saving the setting triggers onDidChangeConfiguration, which re-validates.
+  await vscode.workspace.getConfiguration('schematron')
+    .update('pythonPath', python, vscode.ConfigurationTarget.Global);
+  vscode.window.showInformationMessage(`Schematron: using ${python}`);
 }
 
 function failure(message: string): Item {

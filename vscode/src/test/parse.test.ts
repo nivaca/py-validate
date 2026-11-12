@@ -60,11 +60,17 @@ test('itemsFromJing keeps only lines for the target file', () => {
                    [[2, 14, 'error'], [8, 1, 'warning']]);
 });
 
-test('explainFailure: missing module and last meaningful lines', () => {
-  assert.match(explainFailure("ModuleNotFoundError: No module named 'saxonche'"),
-               /'saxonche' is missing/);
-  assert.equal(explainFailure('[esquema] 1 patterns\nNo existe el documento: /x.xml\n'),
-               'No existe el documento: /x.xml');
+test('explainFailure: missing module names the interpreter', () => {
+  const f = explainFailure("ModuleNotFoundError: No module named 'saxonche'", '/usr/bin/python3');
+  assert.equal(f.interpreter, true);
+  assert.match(f.message, /"\/usr\/bin\/python3" does not have the 'saxonche' module/);
+  assert.match(f.message, /"\/usr\/bin\/python3" -m pip install saxonche lxml/);
+});
+
+test('explainFailure: other errors keep the last meaningful lines', () => {
+  assert.deepEqual(
+    explainFailure('[esquema] 1 patterns\nNo existe el documento: /x.xml\n', 'python3'),
+    { interpreter: false, message: 'No existe el documento: /x.xml' });
 });
 
 // End-to-end against the real validate.py, when VALIDATE_PYTHON points at an

@@ -116,15 +116,27 @@ export function itemsFromJing(output: string, file: string): Item[] {
   return items;
 }
 
-/** Best one-line explanation from validate.py's stderr when it produced no
- *  JSON (environment errors, exit code 3). */
-export function explainFailure(stderr: string): string {
-  if (/No module named '?(saxonche|lxml)/.test(stderr)) {
-    const mod = /No module named '?(\w+)/.exec(stderr)?.[1];
-    return `Python module '${mod}' is missing: pip install saxonche lxml ` +
-      `(or point schematron.pythonPath at an interpreter that has them).`;
+export interface Failure {
+  message: string;
+  /** True when the problem is the Python interpreter itself (missing
+   *  modules), so the user should pick another one. */
+  interpreter: boolean;
+}
+
+/** Best explanation from validate.py's stderr when it produced no JSON
+ *  (environment errors, exit code 3). `python` is the interpreter used. */
+export function explainFailure(stderr: string, python: string): Failure {
+  const mod = /No module named '?(saxonche|lxml)/.exec(stderr)?.[1];
+  if (mod) {
+    return {
+      interpreter: true,
+      message: `The Python interpreter "${python}" does not have the '${mod}' module. ` +
+        `Choose an interpreter that has saxonche and lxml (schematron.pythonPath), ` +
+        `or install them into this one: "${python}" -m pip install saxonche lxml`,
+    };
   }
   const lines = stderr.split(/\r?\n/).map(l => l.trim())
     .filter(l => l && !/^\[(caché|descarga|xml-model|esquema|extracción|cosecha|aviso)\]/.test(l));
-  return lines.slice(-3).join(' ') || 'validate.py failed without a message.';
+  return { interpreter: false,
+           message: lines.slice(-3).join(' ') || 'validate.py failed without a message.' };
 }

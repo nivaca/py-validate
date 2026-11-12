@@ -28,7 +28,13 @@ the Problems panel.
 ## Requirements
 
 - Python 3 with `saxonche` and `lxml`: `pip install saxonche lxml`. If they
-  live in a virtualenv, set `schematron.pythonPath` to its `bin/python`.
+  live in a virtualenv, set `schematron.pythonPath` to its `bin/python`, or
+  run **Schematron: Select Python Interpreter…**. That command opens a file
+  picker, checks that the Python you pick can import both modules, and saves
+  it as a user setting. If validation fails because the interpreter lacks
+  them, a notification names the interpreter it tried and offers the same
+  picker. The notification appears once, not on every save, and again only
+  after you change a setting.
 - Optional: `jing` on your `PATH` (or set `schematron.jingPath`) for the
   RelaxNG layer.
 - Optional: to validate against an **ODD** (`schematron.schemaType: "odd"`),
@@ -49,6 +55,8 @@ the Problems panel.
 | `schematron.relaxng.enabled` | `true` | Run jing when the schema is RelaxNG |
 | `schematron.jingPath` | `jing` | jing executable |
 | `schematron.timeoutSeconds` | `120` | Abort a run after this long |
+
+Changing any `schematron.*` setting re-validates the open files.
 
 The **Schematron** output channel (**Schematron: Show Output**) logs every
 command run and its stderr.
