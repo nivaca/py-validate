@@ -13,7 +13,7 @@ export interface Item {
   col?: number;
   message: string;
   severity: Severity;
-  source: 'Schematron' | 'RelaxNG';
+  source: 'Schematron' | 'RelaxNG' | 'XML';
   code?: string;
 }
 
@@ -69,8 +69,7 @@ export function itemsFromValidate(out: ValidateOutput, file: string): Item[] {
     ?? out.documents[0];
   if (!doc) { return []; }
   if (doc.error) {
-    return [{ line: toLine(doc.error_line), message: doc.error,
-              severity: 'error', source: 'Schematron' }];
+    return itemsFromMalformed(doc.error, doc.error_line);
   }
   const items: Item[] = (doc.violations ?? []).map(v => ({
     line: toLine(v.line),
@@ -94,17 +93,52 @@ export function itemsFromValidate(out: ValidateOutput, file: string): Item[] {
   return items;
 }
 
+/** A not-well-formed document. The parser reports where it NOTICED the
+ *  problem (e.g. the closing tag that doesn't match), which is often far
+ *  from the typo; for a tag mismatch, also flag the line where the unclosed
+ *  tag was opened. */
+export function itemsFromMalformed(message: string, line?: number | null): Item[] {
+  const items: Item[] = [{ line: toLine(line), message, severity: 'error', source: 'XML' }];
+  const m = /Opening and ending tag mismatch: (\S+) line (\d+) and (\S+?),?\s/.exec(message);
+  if (m && Number(m[2]) !== line) {
+    const [, opened, at, closing] = m;
+    items.push({
+      line: Number(at) - 1, severity: 'error', source: 'XML',
+      message: `<${opened}> opened here is never closed: the next end tag is </${closing}>` +
+        (line ? ` (line ${line})` : '') + `. Check for a typo in the element name.`,
+    });
+  }
+  return items;
+}
+
+/** Columns [start, end) to underline on a line. jing's column points just
+ *  AFTER the offending start tag, often at the end of the line, which would
+ *  give an empty (invisible) range; so the underline runs from that tag's
+ *  "<" to the reported column. Without a column, the line's content (minus
+ *  indentation and trailing spaces) is underlined. */
+export function underline(text: string, col?: number): [number, number] {
+  const first = text.search(/\S/);
+  const whole: [number, number] = first < 0 ? [0, text.length] : [first, text.trimEnd().length];
+  if (col === undefined) { return whole; }
+  const c = Math.min(col, text.length);
+  const lt = c > 0 ? text.lastIndexOf('<', c - 1) : -1;
+  if (lt >= 0) { return [lt, Math.max(c, lt + 1)]; }
+  return c < whole[1] ? [c, whole[1]] : whole;
+}
+
 // jing: "/abs/file.xml:12:34: error: message"
 const JING_RE = /^(.*?):(\d+):(\d+): (error|warning|fatal): (.*)$/;
 
-export function itemsFromJing(output: string, file: string): Item[] {
+/** `dropFatal`: leave out jing's fatal (well-formedness) errors, when
+ *  validate.py has already reported the document as not well-formed. */
+export function itemsFromJing(output: string, file: string, dropFatal = false): Item[] {
   const target = path.resolve(file);
   const items: Item[] = [];
   for (const raw of output.split(/\r?\n/)) {
     const m = JING_RE.exec(raw.trim());
     if (!m) { continue; }
     const [, f, line, col, level, msg] = m;
-    if (path.resolve(f) !== target) { continue; }
+    if (path.resolve(f) !== target || (dropFatal && level === 'fatal')) { continue; }
     items.push({
       line: Number(line) - 1,
       col: Math.max(Number(col) - 1, 0),

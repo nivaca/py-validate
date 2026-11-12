@@ -5,7 +5,8 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
-  ValidateOutput, explainFailure, itemsFromJing, itemsFromValidate, severityFor,
+  ValidateOutput, explainFailure, itemsFromJing, itemsFromMalformed, itemsFromValidate,
+  severityFor, underline,
 } from '../parse';
 
 test('severityFor maps Schematron roles', () => {
@@ -45,7 +46,26 @@ test('itemsFromValidate: malformed document', () => {
     documents: [{ file: '/d.xml', error: 'not well-formed', error_line: 7 }],
   };
   assert.deepEqual(itemsFromValidate(out, '/d.xml'),
-    [{ line: 6, message: 'not well-formed', severity: 'error', source: 'Schematron' }]);
+    [{ line: 6, message: 'not well-formed', severity: 'error', source: 'XML' }]);
+});
+
+test('itemsFromMalformed: a tag mismatch also flags where the tag was opened', () => {
+  const msg = 'El documento test.xml no está bien formado: Opening and ending tag ' +
+    'mismatch: notde line 47 and note, line 81, column 18. Corrígelo antes de validar.';
+  const items = itemsFromMalformed(msg, 81);
+  assert.deepEqual(items.map(i => [i.line, i.source]), [[80, 'XML'], [46, 'XML']]);
+  assert.equal(items[1].message,
+    '<notde> opened here is never closed: the next end tag is </note> (line 81). ' +
+    'Check for a typo in the element name.');
+  // other well-formedness errors: just the one item
+  assert.equal(itemsFromMalformed("error parsing attribute name, line 4, column 1", 4).length, 1);
+});
+
+test('itemsFromJing can drop fatal errors', () => {
+  const txt = '/w/d.xml:47:50: error: element "notde" not allowed anywhere\n' +
+              '/w/d.xml:81:13: fatal: The element type "notde" must be terminated';
+  assert.deepEqual(itemsFromJing(txt, '/w/d.xml', true).map(i => i.line), [46]);
+  assert.deepEqual(itemsFromJing(txt, '/w/d.xml').map(i => i.line), [46, 80]);
 });
 
 test('itemsFromJing keeps only lines for the target file', () => {
@@ -103,4 +123,16 @@ test('validate.py --json round trip', { skip: !process.env.VALIDATE_PYTHON }, ()
   // with the surrounding quotes kept tight.
   assert.deepEqual(items, [{ line: 2, message: 'p too long: 13, rend="x"', severity: 'warning',
                              source: 'Schematron', code: 'len' }]);
+});
+
+test('underline never yields an empty range', () => {
+  // jing points just after a start tag that ends the line
+  const l47 = '        <p>texto <notde type="x">';
+  assert.deepEqual(underline(l47, l47.length), [l47.indexOf('<notde'), l47.length]);
+  // column in the middle of the line: from the tag's "<" to the column
+  assert.deepEqual(underline('<p>c<bogus/></p>', 12), [4, 12]);
+  // no column: the content without indentation or trailing spaces
+  assert.deepEqual(underline('    </note>   '), [4, 11]);
+  // column past the end, no "<" before it
+  assert.deepEqual(underline('  plain text', 40), [2, 12]);
 });

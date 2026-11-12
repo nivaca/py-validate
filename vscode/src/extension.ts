@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
-  Item, ValidateOutput, explainFailure, itemsFromJing, itemsFromValidate,
+  Item, ValidateOutput, explainFailure, itemsFromJing, itemsFromValidate, underline,
 } from './parse';
 
 let diagnostics: vscode.DiagnosticCollection;
@@ -216,11 +216,12 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
     }
 
     let relaxngRan = false;
-    // jing would only repeat a well-formedness error validate.py already
-    // reported, so it runs only on well-formed text.
+    // On text that is not well-formed jing still runs: its errors before the
+    // fatal one often pinpoint the typo ("element notde not allowed"); only
+    // its fatal error is dropped, as validate.py already reported it.
     const malformed = parsed?.documents.some(d => d.error) ?? false;
-    if (parsed?.source.type === 'rng' && !malformed && c.get<boolean>('relaxng.enabled')) {
-      const rItems = await relaxng(doc, parsed.source.path, input, cwd, key, timeoutMs);
+    if (parsed?.source.type === 'rng' && c.get<boolean>('relaxng.enabled')) {
+      const rItems = await relaxng(doc, parsed.source.path, input, cwd, key, timeoutMs, malformed);
       if (generation.get(key) !== gen) { return; }
       relaxngRan = rItems !== null;
       items.push(...(rItems ?? []));
@@ -277,7 +278,8 @@ function updateStatus() {
 }
 
 async function relaxng(doc: vscode.TextDocument, rng: string, file: string,
-                       cwd: string, key: string, timeoutMs: number): Promise<Item[] | null> {
+                       cwd: string, key: string, timeoutMs: number,
+                       dropFatal = false): Promise<Item[] | null> {
   const jing = cfg(doc).get<string>('jingPath') || 'jing';
   const r = await run(jing, [rng, file], cwd, key, timeoutMs);
   if (r.spawnError) {
@@ -293,7 +295,7 @@ async function relaxng(doc: vscode.TextDocument, rng: string, file: string,
     return [{ line: -1, severity: 'warning', source: 'RelaxNG',
               message: `jing failed (exit ${r.code}): ${(r.stderr || r.stdout).trim().split('\n').pop()}` }];
   }
-  return itemsFromJing(r.stdout + '\n' + r.stderr, file);
+  return itemsFromJing(r.stdout + '\n' + r.stderr, file, dropFatal);
 }
 
 async function notifyInterpreter(message: string) {
@@ -351,11 +353,8 @@ const SEVERITY = {
 
 function toDiagnostic(doc: vscode.TextDocument, i: Item): vscode.Diagnostic {
   const lineNo = Math.min(Math.max(i.line, 0), doc.lineCount - 1);
-  const line = doc.lineAt(lineNo);
-  const start = i.col !== undefined
-    ? Math.min(i.col, line.text.length)
-    : line.firstNonWhitespaceCharacterIndex;
-  const range = new vscode.Range(lineNo, start, lineNo, Math.max(line.text.length, start));
+  const [start, end] = underline(doc.lineAt(lineNo).text, i.col);
+  const range = new vscode.Range(lineNo, start, lineNo, end);
   const d = new vscode.Diagnostic(range, i.message, SEVERITY[i.severity]);
   d.source = i.source;
   if (i.code) { d.code = i.code; }

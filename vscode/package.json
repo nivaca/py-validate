@@ -2,7 +2,7 @@
   "name": "validate-schematron",
   "displayName": "Schematron Validator (validate.py)",
   "description": "Validates XML/TEI documents against Schematron rules (from a .sch, an ODD or a RelaxNG with embedded rules) and, optionally, RelaxNG structure via jing. Results appear as diagnostics in the editor and the Problems panel.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "nivaca",
   "license": "MIT",
   "repository": {
@@ -45,7 +45,7 @@
       },
       {
         "command": "schematron.selectInterpreter",
-        "title": "Select Python Interpreter…",
+        "title": "Select Python Interpreter\u2026",
         "category": "Schematron"
       }
     ],
@@ -147,11 +147,13 @@
     "bundle-validator": "node scripts/bundle-validator.js",
     "vscode:prepublish": "npm run compile && npm run bundle-validator",
     "test": "npm run compile && node --test out/test/*.test.js",
-    "package": "vsce package"
+    "package": "vsce package",
+    "test:integration": "npm run compile && npm run bundle-validator && node out/test/integration/runTest.js"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^3.2.0",
     "typescript": "^5.4.0"
   }

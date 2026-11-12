@@ -2,4 +2,7 @@ __pycache__/
 common/
 odds/
 rng/
-bak/.schema-cache/
+bak/
+.schema-cache/
+.venv/
+test.xml

@@ -34,6 +34,12 @@ the Problems panel.
   it were your file, and deleted right after. While a tag is half-typed, you
   see a "not well-formed" error on that line until the XML is complete again.
   Unsaved text is always validated as UTF-8.
+- **Not well-formed XML:** reported with source **XML**. The parser notices a
+  broken tag only where it ends, sometimes many lines later, so for a tag
+  mismatch the line where the unclosed tag was opened is flagged too. jing
+  still runs, and its errors usually point straight at the misspelt element.
+- **What is underlined:** the offending element's start tag for RelaxNG
+  errors, and the line's content (without indentation) otherwise.
 
 ## Requirements
 
@@ -79,6 +85,9 @@ command run and its stderr.
 cd vscode
 npm install
 npm test            # set VALIDATE_PYTHON=/path/to/python to include the end-to-end test
+# Real VS Code, headless (Linux), with a throwaway profile:
+env -u WAYLAND_DISPLAY VALIDATE_PYTHON=/path/to/python JING=$(command -v jing) \
+  VSCODE_PATH=/usr/share/code/code xvfb-run -a npm run test:integration
 npx vsce package    # -> validate-schematron-<version>.vsix
 code --install-extension validate-schematron-<version>.vsix
 ```

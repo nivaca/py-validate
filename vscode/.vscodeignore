@@ -8,3 +8,5 @@ node_modules/**
 *.vsix
 .gitignore
 **/.schema-cache/**
+# documents kept here for manual testing never belong in the package
+**/*.xml
