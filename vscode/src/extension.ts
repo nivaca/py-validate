@@ -30,6 +30,10 @@ type Outcome =
 const outcomes = new Map<string, Outcome>();
 let statusItem: vscode.StatusBarItem;
 
+/** The step-by-step setup instructions (the README's "Before you start"). */
+const SETUP_GUIDE = 'https://github.com/nivaca/py-validate/tree/main/vscode#before-you-start';
+const openSetupGuide = () => vscode.env.openExternal(vscode.Uri.parse(SETUP_GUIDE));
+
 /** Pending "validate after typing" timers, per document. */
 const changeTimers = new Map<string, NodeJS.Timeout>();
 
@@ -64,6 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('schematron.showOutput', () => output.show()),
     vscode.commands.registerCommand('schematron.selectInterpreter', chooseInterpreter),
     vscode.commands.registerCommand('schematron.refreshSchema', refreshSchema),
+    vscode.commands.registerCommand('schematron.setupGuide', openSetupGuide),
     vscode.workspace.onDidOpenTextDocument(doc => {
       if (cfg(doc).get<boolean>('validateOnOpen')) { void validate(doc, false); }
     }),
@@ -347,9 +352,11 @@ async function refreshSchema(): Promise<RefreshResult> {
 async function notifyInterpreter(message: string) {
   if (interpreterNotified) { return; }
   interpreterNotified = true;
-  const choose = 'Choose Interpreter…', settings = 'Open Settings';
-  const pick = await vscode.window.showErrorMessage(`Schematron: ${message}`, choose, settings);
-  if (pick === choose) {
+  const guide = 'Setup Guide', choose = 'Choose Interpreter…', settings = 'Open Settings';
+  const pick = await vscode.window.showErrorMessage(`Schematron: ${message}`, guide, choose, settings);
+  if (pick === guide) {
+    await openSetupGuide();
+  } else if (pick === choose) {
     await chooseInterpreter();
   } else if (pick === settings) {
     await vscode.commands.executeCommand('workbench.action.openSettings', 'schematron.pythonPath');
@@ -374,11 +381,12 @@ async function chooseInterpreter() {
     const why = r.spawnError
       ? `it could not be run (${r.spawnError.code ?? r.spawnError.message})`
       : 'it cannot import saxonche and lxml';
-    const again = 'Choose Another…';
+    const again = 'Choose Another…', guide = 'Setup Guide';
     const pick = await vscode.window.showErrorMessage(
       `Schematron: "${python}" was not saved because ${why}. ` +
-      `Install them with: "${python}" -m pip install saxonche lxml`, again);
+      `Install them with: "${python}" -m pip install saxonche lxml`, again, guide);
     if (pick === again) { await chooseInterpreter(); }
+    if (pick === guide) { await openSetupGuide(); }
     return;
   }
   // Saving the setting triggers onDidChangeConfiguration, which re-validates.

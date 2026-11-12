@@ -6,6 +6,20 @@ changed. The releases, with their `.vsix` files, are on
 [Codeberg](https://codeberg.org/nivaca/py-validate/releases) and
 [GitHub](https://github.com/nivaca/py-validate/releases).
 
+## 0.5.5 — 2026-11-12
+
+- Clear setup instructions for newcomers: the README opens with
+  **Before you start**, four steps to install Python and the two libraries
+  the extension needs (saxonche and lxml), with the commands for Linux,
+  macOS and Windows, an optional section on jing, and what to do when
+  something goes wrong.
+- The notification shown when the Python interpreter lacks the libraries
+  has a **Setup Guide** button that opens those steps; so does the error
+  shown when a chosen interpreter lacks them, and the new command
+  **Schematron: Setup Guide**.
+- The extension's description and the `schematron.pythonPath` setting say
+  what is required.
+
 ## 0.5.4 — 2026-11-12
 
 - Published on the Visual Studio Marketplace, under the publisher
