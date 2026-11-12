@@ -6,6 +6,15 @@ changed. The releases, with their `.vsix` files, are on
 [Codeberg](https://codeberg.org/nivaca/py-validate/releases) and
 [GitHub](https://github.com/nivaca/py-validate/releases).
 
+## 0.5.4 — 2026-11-12
+
+- Published on the Visual Studio Marketplace, under the publisher
+  NicolasVaughan. The extension's ID is now
+  `NicolasVaughan.validate-schematron`. If you installed an earlier version
+  from a `.vsix` (ID `nivaca.validate-schematron`), uninstall it first, or
+  both will run.
+- Links point to the repositories' new name, py-validate.
+
 ## 0.5.3 — 2026-11-12
 
 - This changelog, shown on the extension's page.

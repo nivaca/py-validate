@@ -3,7 +3,7 @@
 # anywhere.
 #
 # One-time setup:
-#   1. On https://marketplace.visualstudio.com/manage, publisher "nivaca":
+#   1. On https://marketplace.visualstudio.com/manage, publisher "NicolasVaughan":
 #      add a Trusted Publishing policy for the GitHub repository
 #      nivaca/py-validate and the workflow file publish-vscode.yml.
 #   2. On GitHub, Settings > Secrets and variables > Actions > Variables:
