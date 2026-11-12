@@ -61,7 +61,7 @@ from pathlib import Path
 from lxml import etree
 from saxonche import PySaxonProcessor
 
-__version__ = "1.7"
+__version__ = "1.8"
 
 SCH_NS = 'http://purl.oclc.org/dsdl/schematron'
 S = f'{{{SCH_NS}}}'
@@ -276,12 +276,17 @@ def clasificar_esquema(path: Path) -> str:
 def href_xml_model(doc_path: Path, preferencia=(SCH_NS, RELAXNG_NS)):
     """href de la PI <?xml-model?> del documento: la primera cuyo
     schematypens figure en `preferencia` (por orden); en su defecto, la
-    primera PI con href. Termina con código 3 si no hay ninguna."""
+    primera PI con href. Termina con código 3 si no hay ninguna.
+    El análisis es tolerante (recover): las PIs van en el prólogo y deben
+    poder leerse aunque el cuerpo esté a medio escribir; la buena formación
+    la juzga después validar(), que la informa con su número de línea."""
     exigir_archivo(doc_path, 'el documento')
     try:
-        tree = etree.parse(str(doc_path))
+        tree = etree.parse(str(doc_path), etree.XMLParser(recover=True))
     except etree.XMLSyntaxError as e:
         morir(f"El documento {doc_path.name} no está bien formado: {e}")
+    if tree.getroot() is None:
+        morir(f"El documento {doc_path.name} no contiene XML legible.")
     entradas = [(pi.get('href'), pi.get('schematypens') or '')
                 for pi in tree.xpath('//processing-instruction("xml-model")')
                 if pi.get('href')]
@@ -295,16 +300,17 @@ def href_xml_model(doc_path: Path, preferencia=(SCH_NS, RELAXNG_NS)):
     return entradas[0][0]
 
 
-def detectar_esquema(doc_path: Path, refresh=False):
+def detectar_esquema(doc_path: Path, refresh=False, base_dir: Path = None):
     """Lee las PIs <?xml-model?> del documento y devuelve (ruta, tipo).
     Preferencia: una PI con schematypens de Schematron; en su defecto, la
     de RelaxNG (cuyo Schematron embebido se cosechará); hrefs duplicados
     (el patrón habitual: el mismo .rng asociado dos veces, una por capa)
     cuentan como una sola fuente. La clasificación final es por contenido,
-    no por extensión ni por lo que la PI declare."""
+    no por extensión ni por lo que la PI declare. Los hrefs relativos se
+    resuelven contra `base_dir` (por defecto, el directorio del documento)."""
     href = href_xml_model(doc_path)
     print(f"[xml-model] esquema detectado: {href}", file=sys.stderr)
-    local = obtener_recurso(href, doc_path.parent, refresh)
+    local = obtener_recurso(href, base_dir or doc_path.parent, refresh)
     tipo = clasificar_esquema(local)
     print(f"[xml-model] clasificado por contenido como: {tipo}",
           file=sys.stderr)
@@ -436,17 +442,20 @@ class DocumentoMalFormado(Exception):
         self.line = line
 
 
-def validar(doc_path: Path, nss, patterns, proc, n_lineas=None):
+def validar(doc_path: Path, nss, patterns, proc, n_lineas=None, nombre=None):
     """Valida un documento y devuelve un dict con sus infracciones (cada una
     con pattern, contexto, tipo, role, mensaje, texto interpolado, path y,
     para las primeras `n_lineas` —todas si es None—, línea y xml:id), los
-    errores XPath agrupados por regla y el tiempo empleado."""
+    errores XPath agrupados por regla y el tiempo empleado. `nombre` es el
+    nombre que se muestra en los mensajes (con --as, el del documento real
+    y no el del temporal)."""
     exigir_archivo(doc_path, 'el documento')
+    nombre = nombre or doc_path.name
     try:
         lx = etree.parse(str(doc_path))      # para números de línea
     except etree.XMLSyntaxError as e:
         raise DocumentoMalFormado(
-            f"El documento {doc_path.name} no está bien formado: {e}. "
+            f"El documento {nombre} no está bien formado: {e.msg}. "
             f"Corrígelo antes de validar (xmllint --noout lo localiza).",
             e.lineno)
     xp = proc.new_xpath_processor()
@@ -584,7 +593,17 @@ def main():
                     help='salida JSON por stdout (todas las infracciones, con '
                          'línea y xml:id; ignora -v y --max); los mensajes de '
                          'diagnóstico siguen yendo a stderr')
+    ap.add_argument('--as', dest='como', type=Path, metavar='RUTA',
+                    help='con un único documento: tratarlo como si estuviera '
+                         'en RUTA (resolución de hrefs relativos de xml-model '
+                         'y nombre en el informe). La extensión de VS Code lo '
+                         'usa para validar el texto sin guardar a partir de '
+                         'una copia temporal')
     args = ap.parse_args()
+    if args.como and len(args.docs) != 1:
+        ap.error('--as requiere exactamente un documento')
+    base = args.como.resolve().parent if args.como else None
+    nombre = args.como.name if args.como else None
 
     resultados, mal_formados = [], 0
     with PySaxonProcessor(license=False) as proc:
@@ -595,7 +614,7 @@ def main():
         elif args.sch:
             fuente, tipo = args.sch, 'sch'
         else:
-            fuente, tipo = detectar_esquema(args.docs[0], args.refresh)
+            fuente, tipo = detectar_esquema(args.docs[0], args.refresh, base)
             if len(args.docs) > 1:
                 print("[aviso] esquema detectado del PRIMER documento; se "
                       "aplica a todos los de esta invocación", file=sys.stderr)
@@ -613,14 +632,17 @@ def main():
             try:
                 res = validar(d, nss, patterns, proc,
                               n_lineas=None if args.json else
-                              (args.max if args.verbose else 0))
+                              (args.max if args.verbose else 0),
+                              nombre=nombre)
             except DocumentoMalFormado as e:
                 if not args.json:
                     morir(str(e))
                 mal_formados += 1
-                resultados.append({'file': str(d), 'error': str(e),
+                resultados.append({'file': str(args.como or d), 'error': str(e),
                                    'error_line': e.line})
                 continue
+            if args.como:
+                res['file'] = str(args.como)
             resultados.append(res)
             if not args.json:
                 informe_texto(res, args.verbose, args.max)

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { spawn, ChildProcess } from 'child_process';
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
@@ -28,6 +29,14 @@ type Outcome =
 const outcomes = new Map<string, Outcome>();
 let statusItem: vscode.StatusBarItem;
 
+/** Pending "validate after typing" timers, per document. */
+const changeTimers = new Map<string, NodeJS.Timeout>();
+
+function clearChangeTimer(key: string) {
+  const t = changeTimers.get(key);
+  if (t) { clearTimeout(t); changeTimers.delete(key); }
+}
+
 interface RunResult { code: number | null; stdout: string; stderr: string; spawnError?: NodeJS.ErrnoException }
 
 const cfg = (doc: vscode.TextDocument) =>
@@ -48,12 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.onDidChangeActiveTextEditor(() => updateStatus()),
     vscode.commands.registerCommand('schematron.validate', () => {
       const doc = vscode.window.activeTextEditor?.document;
-      if (!doc) { return; }
-      if (doc.isDirty) {
-        vscode.window.showInformationMessage(
-          'Schematron: validating the saved version of the file; save to include your latest changes.');
-      }
-      void validate(doc, true);
+      if (doc) { void validate(doc, true); }
     }),
     vscode.commands.registerCommand('schematron.clear', () => diagnostics.clear()),
     vscode.commands.registerCommand('schematron.showOutput', () => output.show()),
@@ -62,9 +66,24 @@ export function activate(context: vscode.ExtensionContext) {
       if (cfg(doc).get<boolean>('validateOnOpen')) { void validate(doc, false); }
     }),
     vscode.workspace.onDidSaveTextDocument(doc => {
+      clearChangeTimer(doc.uri.toString());
       if (cfg(doc).get<boolean>('validateOnSave')) { void validate(doc, false); }
     }),
+    vscode.workspace.onDidChangeTextDocument(e => {
+      const doc = e.document;
+      if (!e.contentChanges.length || doc.uri.scheme !== 'file' || doc.languageId !== 'xml') { return; }
+      const c = cfg(doc);
+      if (!c.get<boolean>('validateOnChange')) { return; }
+      // Wait until typing pauses; every change restarts the wait.
+      const key = doc.uri.toString();
+      clearChangeTimer(key);
+      changeTimers.set(key, setTimeout(() => {
+        changeTimers.delete(key);
+        void validate(doc, false);
+      }, Math.max(c.get<number>('changeDelayMs') ?? 500, 100)));
+    }),
     vscode.workspace.onDidCloseTextDocument(doc => {
+      clearChangeTimer(doc.uri.toString());
       cancel(doc.uri.toString());
       outcomes.delete(doc.uri.toString());
       diagnostics.delete(doc.uri);
@@ -92,6 +111,7 @@ function revalidateOpen() {
 }
 
 export function deactivate() {
+  for (const key of changeTimers.keys()) { clearChangeTimer(key); }
   for (const key of running.keys()) { cancel(key); }
 }
 
@@ -158,8 +178,19 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
 
   setOutcome(key, { state: 'running' });
   let failedMessage: string | undefined;
-  {
-    const args = [validator, '--json', ...(schema ? [schemaFlag, schema] : []), file];
+  // Unsaved edits: validate the editor's text from a private temporary copy
+  // (never next to the user's file); --as makes validate.py resolve relative
+  // xml-model hrefs and report as if it were the real file.
+  let tmpDir: string | undefined;
+  let input = file;
+  if (doc.isDirty) {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'schematron-'));
+    input = path.join(tmpDir, path.basename(file));
+    fs.writeFileSync(input, doc.getText(), 'utf8');
+  }
+  try {
+    const args = [validator, '--json', ...(schema ? [schemaFlag, schema] : []),
+                  ...(tmpDir ? ['--as', file] : []), input];
     const r = await run(python, args, cwd, key, timeoutMs);
     if (generation.get(key) !== gen) { return; }        // superseded
 
@@ -185,8 +216,11 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
     }
 
     let relaxngRan = false;
-    if (parsed?.source.type === 'rng' && c.get<boolean>('relaxng.enabled')) {
-      const rItems = await relaxng(doc, parsed.source.path, file, cwd, key, timeoutMs);
+    // jing would only repeat a well-formedness error validate.py already
+    // reported, so it runs only on well-formed text.
+    const malformed = parsed?.documents.some(d => d.error) ?? false;
+    if (parsed?.source.type === 'rng' && !malformed && c.get<boolean>('relaxng.enabled')) {
+      const rItems = await relaxng(doc, parsed.source.path, input, cwd, key, timeoutMs);
       if (generation.get(key) !== gen) { return; }
       relaxngRan = rItems !== null;
       items.push(...(rItems ?? []));
@@ -198,6 +232,8 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
       ? { state: 'failed', message: failedMessage, at: new Date() }
       : { state: 'done', errors: count('error'), warnings: count('warning'),
           infos: count('info'), relaxng: relaxngRan, at: new Date() });
+  } finally {
+    if (tmpDir) { fs.rmSync(tmpDir, { recursive: true, force: true }); }
   }
 }
 

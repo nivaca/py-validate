@@ -2,7 +2,7 @@
   "name": "validate-schematron",
   "displayName": "Schematron Validator (validate.py)",
   "description": "Validates XML/TEI documents against Schematron rules (from a .sch, an ODD or a RelaxNG with embedded rules) and, optionally, RelaxNG structure via jing. Results appear as diagnostics in the editor and the Problems panel.",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "publisher": "nivaca",
   "license": "MIT",
   "repository": {
@@ -104,6 +104,19 @@
           "type": "boolean",
           "default": true,
           "description": "Validate XML files when they are saved.",
+          "scope": "resource"
+        },
+        "schematron.validateOnChange": {
+          "type": "boolean",
+          "default": true,
+          "description": "Validate XML files as you type (unsaved changes included), once typing pauses for schematron.changeDelayMs.",
+          "scope": "resource"
+        },
+        "schematron.changeDelayMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "description": "How long typing must pause before validating unsaved changes (milliseconds).",
           "scope": "resource"
         },
         "schematron.relaxng.enabled": {

@@ -1,6 +1,6 @@
 # validate.py — Schematron validation from the terminal
 
-**Version 1.7** (`validate.py --version`)
+**Version 1.8** (`validate.py --version`)
 
 Schematron-layer validator for the SMTrad project. It extracts the ISO
 Schematron rules embedded in the ODD (`smed-schema.xml`) and runs them
@@ -66,7 +66,7 @@ from anywhere.
 ## 3. Usage
 
 ```
-python3 validate.py [-o ODD | -s SCH | -r RNG] [-v] [--max N] [--refresh] [--json] DOC.xml [...]
+python3 validate.py [-o ODD | -s SCH | -r RNG] [-v] [--max N] [--refresh] [--json] [--as PATH] DOC.xml [...]
 ```
 
 Since v1.2, the schema flags are **optional**: without them, the schema is
@@ -81,6 +81,7 @@ Since v1.2, the schema flags are **optional**: without them, the schema is
 | `--max N` | Maximum offenders in the detailed listing (default 50). If there are more, the script **says how many were left out** — it never truncates silently |
 | `--refresh` | With auto-detection: re-download a remote schema even if cached |
 | `--json` | Machine-readable report on stdout: every violation (pattern, context, assert/report, `role`, message, interpolated text, `fn:path`, line, `xml:id`), XPath errors per rule, and the schema source; ignores `-v`/`--max`. A malformed document becomes an `error` entry instead of aborting the run. Progress messages still go to stderr (used by the VS Code extension, §3.2) |
+| `--as PATH` | With a single document: treat it as if it were located at PATH, for resolving relative `xml-model` hrefs and for the name in the report. The VS Code extension uses it to validate unsaved text from a temporary copy |
 
 The three explicit sources are mutually exclusive; when none is given,
 auto-detection takes over.
@@ -369,7 +370,8 @@ Decisions best not re-litigated without rereading the project's history:
 
 | Version | Date | Changes |
 |---|---|---|
-| **1.7** | 2026-11-12 | Fix: concurrent runs (e.g. VS Code validating several files at once) could read a downloaded schema while another run was writing it, failing with "no es XML bien formado: Premature end of data". All cache writes (downloaded schemas, harvested and extracted `.sch`) are now **atomic** (temporary file + rename); a damaged cached copy left by older versions is detected and re-downloaded or regenerated; a download that is not well-formed XML is never cached; the harvest self-check now runs before writing |
+| **1.8** | 2026-11-12 | `--as PATH`: validate a document as if it were located elsewhere (relative `xml-model` hrefs, report name); schema auto-detection now reads the `xml-model` PIs tolerantly, so a document that is not (yet) well-formed gets a normal "not well-formed" error with its line instead of an environment failure. Used by the VS Code extension 0.4.0 to validate as you type |
+| 1.7 | 2026-11-12 | Fix: concurrent runs (e.g. VS Code validating several files at once) could read a downloaded schema while another run was writing it, failing with "no es XML bien formado: Premature end of data". All cache writes (downloaded schemas, harvested and extracted `.sch`) are now **atomic** (temporary file + rename); a damaged cached copy left by older versions is detected and re-downloaded or regenerated; a download that is not well-formed XML is never cached; the harvest self-check now runs before writing |
 | 1.6 | 2026-11-12 | Message fixes: `sch:name` (with optional `@path`) is now interpolated (it was dropped, giving e.g. "Error: has corresp…"); `sch:value-of` yields the **string value** (an attribute gave `corresp=" corresp="#" "`); message text keeps its own spacing around interpolated values. In the aggregate count, dynamic parts show as `…` |
 | 1.5 | 2026-11-12 | `--json`: machine-readable report (every violation with pattern, context, `role`, interpolated text, line and `xml:id`; XPath errors per rule; schema source), malformed documents reported as entries instead of aborting; validation separated from text reporting (text output unchanged); new **VS Code extension** in `vscode/` (§3.2) showing Schematron and jing results as editor diagnostics |
 | 1.4 | 2026-11-12 | Fix: schema- and pattern-level `<let>`s are now honoured (previously ignored, so rules using them failed to evaluate and were silently skipped); fix: line/`xml:id` resolution for no-namespace and undeclared-namespace elements and for attribute/text offenders; XPath errors reported once per rule with node count and an **INCOMPLETE verdict** warning in the summary; let-wrapping precomputed at schema load; shared xml-model lookup (`href_xml_model`) reused by `validate-all.sh` |

@@ -7,10 +7,11 @@ the Problems panel.
 
 ## What it does
 
-- **When it runs:** on open and on save of `.xml` files that carry an
-  `<?xml-model?>` processing instruction, or of any XML file when
-  `schematron.schema` is set. You can also run **Schematron: Validate Current
-  File** from the Command Palette.
+- **When it runs:** as you type (once typing pauses for
+  `schematron.changeDelayMs`, 500 ms by default), on open and on save, for
+  `.xml` files that carry an `<?xml-model?>` processing instruction, or for
+  any XML file when `schematron.schema` is set. You can also run
+  **Schematron: Validate Current File** from the Command Palette.
 - **Schematron layer:** runs `validate.py --json`. The schema is auto-detected
   from `<?xml-model?>` (with the same download cache and classification as the
   command-line tool) or taken from your settings. Each failed `assert` or
@@ -28,8 +29,11 @@ the Problems panel.
   The tooltip gives the details and the time of the last check; clicking it
   opens the output log. It is hidden for XML files the extension does not
   validate.
-- **Saved files only:** validation always runs on the saved file on disk, not
-  on unsaved edits.
+- **Unsaved edits:** these are validated too. The editor's text is written to
+  a private temporary folder (never next to your file), validated there as if
+  it were your file, and deleted right after. While a tag is half-typed, you
+  see a "not well-formed" error on that line until the XML is complete again.
+  Unsaved text is always validated as UTF-8.
 
 ## Requirements
 
@@ -58,6 +62,8 @@ the Problems panel.
 | `schematron.schemaType` | `rng` | Type of `schematron.schema`: `rng`, `sch` or `odd` |
 | `schematron.validateOnOpen` | `true` | Validate when a file is opened |
 | `schematron.validateOnSave` | `true` | Validate when a file is saved |
+| `schematron.validateOnChange` | `true` | Validate as you type, including unsaved changes |
+| `schematron.changeDelayMs` | `500` | How long typing must pause before validating (ms, minimum 100) |
 | `schematron.relaxng.enabled` | `true` | Run jing when the schema is RelaxNG |
 | `schematron.jingPath` | `jing` | jing executable |
 | `schematron.timeoutSeconds` | `120` | Abort a run after this long |
