@@ -447,3 +447,17 @@ Decisions best not re-litigated without rereading the project's history:
 | **1.2** | 2026-07-17 | Schema auto-detection from `<?xml-model?>` PIs with download and caching of remote schemas (`.schema-cache/`, `--refresh`); content-based schema classification (RNG/Schematron/ODD); source flags now optional; `--version`. Matching `validate-all.sh`: auto mode without a schema argument, reusing validate.py's resolution and cache |
 | 1.1 | 2026-07-12 | `-r` route (harvesting of RelaxNG-embedded Schematron, with deduplication); fix for the namespace-serialization bug in harvesting (`cleanup_namespaces`) plus **post-harvest self-check**; `current()` support (P5 rules); malformed-document guard; empty-schema guards (ODD and RNG); exit code 3 for environment errors; **dual-mtime** cache (source + script); two-layer wrapper `validate-all.sh` |
 | 1.0 | 2026-07-10 | Initial release: ODD→`.sch` extraction (`-o`) with mtime cache, direct `.sch` (`-s`), Schematron runner on Saxon/XPath 3.1 (pattern/rule/assert/report/let, first-match shadowing), report without hidden caps, offender resolution to line + `xml:id`, exit codes 0/1/2 |
+
+## 12. License
+
+Copyright (C) 2026 Nicolas Vaughan
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the [GNU General Public License](LICENSE) for more
+details.

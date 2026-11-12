@@ -99,6 +99,11 @@ repository on GitHub) are not seen until you refresh it. A local schema file
 needs no refresh: changes to it are picked up automatically, and the command
 says so.
 
+## License
+
+Copyright (C) 2026 Nicolas Vaughan. Free software under the GNU General
+Public License, version 3 or later; see [LICENSE](https://codeberg.org/nivaca/validate/src/branch/main/LICENSE).
+
 ## Building
 
 ```sh

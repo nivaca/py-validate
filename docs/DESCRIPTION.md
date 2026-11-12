@@ -13,8 +13,8 @@ for Visual Studio Code shows the same results in the editor, underlined
 as you type.  Nicolas Vaughan made it in 2026, for the editions of the
 SMTrad project.  Here I explain how it was made, in eight stages.
 
-validate.py is free software, under the MIT licence.  It is written in
-Python and stands on two libraries: saxonche (Saxon C), which evaluates
+validate.py is free software, under the GNU General Public License,
+version 3 or later.  It is written in Python and stands on two libraries: saxonche (Saxon C), which evaluates
 the rules with XPath 3.1, and lxml, which finds the lines and the
 `xml:id`s.  The structural layer uses jing, and the extension is written
 in TypeScript.

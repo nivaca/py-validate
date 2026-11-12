@@ -448,3 +448,21 @@ Decisiones que conviene no re-litigar sin releer la historia del proyecto:
 | **1.2** | 2026-07-17 | Autodetección de esquema por PI `<?xml-model?>` con descarga y caché de esquemas remotos (`.schema-cache/`, `--refresh`); clasificación del esquema por contenido (RNG/Schematron/ODD); flags de fuente ahora opcionales; `--version`. `validate-all.sh` a juego: modo auto sin argumento de esquema, reutilizando la resolución y caché de validate.py |
 | 1.1 | 2026-07-12 | Ruta `-r` (cosecha del Schematron embebido en RelaxNG, con deduplicación); corrección del bug de serialización de namespaces en la cosecha (`cleanup_namespaces`) y **self-check post-cosecha**; soporte de `current()` (reglas P5); guardián de documentos mal formados; guardianes anti-esquema-vacío (ODD y RNG); código de salida 3 para errores de entorno; caché por **doble mtime** (fuente + script); wrapper bicapa `validate-all.sh` |
 | 1.0 | 2026-07-10 | Versión inicial: extracción ODD→`.sch` (`-o`) con caché por mtime, `.sch` directo (`-s`), runner Schematron sobre Saxon/XPath 3.1 (pattern/rule/assert/report/let, first-match shadowing), informe sin tope oculto, resolución de infractores a línea + `xml:id`, códigos de salida 0/1/2 |
+
+## 12. Licencia
+
+Copyright (C) 2026 Nicolas Vaughan
+
+Este programa es software libre: puede redistribuirlo y/o modificarlo según
+los términos de la Licencia Pública General de GNU publicada por la Free
+Software Foundation, ya sea la versión 3 de la Licencia o (a su elección)
+cualquier versión posterior.
+
+Este programa se distribuye con la esperanza de que sea útil, pero SIN
+GARANTÍA ALGUNA; ni siquiera la garantía implícita de COMERCIABILIDAD o de
+IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Véase la [Licencia Pública General
+de GNU](LICENSE) para más detalles.
+
+Esta es una traducción no oficial, solo a título informativo: el texto que
+rige es el de la Licencia Pública General de GNU en inglés, en el archivo
+[LICENSE](LICENSE).
