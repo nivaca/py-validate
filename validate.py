@@ -47,8 +47,10 @@ Requisitos: pip install saxonche lxml
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
+import tempfile
 import time
 import urllib.request
 from urllib.parse import urlparse
@@ -59,7 +61,7 @@ from pathlib import Path
 from lxml import etree
 from saxonche import PySaxonProcessor
 
-__version__ = "1.6"
+__version__ = "1.7"
 
 SCH_NS = 'http://purl.oclc.org/dsdl/schematron'
 S = f'{{{SCH_NS}}}'
@@ -87,13 +89,46 @@ def exigir_archivo(path: Path, papel: str):
         morir(f"No existe {papel}: {path.resolve()}")
 
 
+def escribir_atomico(dest: Path, datos: bytes):
+    """Escribe en un temporal del mismo directorio y lo renombra encima de
+    `dest`: un lector concurrente ve el archivo anterior o el nuevo completo,
+    nunca uno a medias, y una escritura interrumpida no deja nada en `dest`
+    (incidente 2026-11-12: dos validaciones simultáneas al recargar VS Code;
+    una leyó el esquema mientras la otra lo escribía)."""
+    fd, tmp = tempfile.mkstemp(dir=dest.parent, prefix=f'.{dest.name}.',
+                               suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            f.write(datos)
+        mascara = os.umask(0)                   # mkstemp crea con 0600;
+        os.umask(mascara)                       # se dejan los permisos de
+        os.chmod(tmp, 0o666 & ~mascara)         # un archivo normal
+        os.replace(tmp, dest)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
+def bien_formado(path: Path) -> bool:
+    try:
+        etree.parse(str(path))
+        return True
+    except etree.XMLSyntaxError:
+        return False
+
+
 def cache_al_dia(fuente: Path, derivado: Path) -> bool:
     """La caché se invalida si cambia la fuente O el propio script (un
-    generador corregido debe regenerar sus derivados; episodio 2026-07-12)."""
+    generador corregido debe regenerar sus derivados; episodio 2026-07-12),
+    y también si el derivado no es XML bien formado (escrito a medias por
+    una versión anterior, sin escritura atómica)."""
     frescura = max(fuente.stat().st_mtime, Path(__file__).stat().st_mtime)
     if derivado.exists() and derivado.stat().st_mtime >= frescura:
-        print(f"[caché] {derivado.name} está al día", file=sys.stderr)
-        return True
+        if bien_formado(derivado):
+            print(f"[caché] {derivado.name} está al día", file=sys.stderr)
+            return True
+        print(f"[aviso] {derivado.name} está dañado; se regenera",
+              file=sys.stderr)
     return False
 
 
@@ -124,7 +159,7 @@ def extraer_sch(odd: Path, proc: PySaxonProcessor) -> Path:
             f"(p. ej. tei_all.odd), resuélvelo primero con odd2odd contra "
             f"p5subset.xml, o valida contra su RelaxNG generado con -r "
             f"(véase README §7).")
-    sch.write_text(out, encoding='utf-8')
+    escribir_atomico(sch, out.encode('utf-8'))
     print(f"[extracción] {odd.name} -> {sch.name}", file=sys.stderr)
     return sch
 
@@ -161,17 +196,20 @@ def sch_desde_rng(rng: Path) -> Path:
     # declaración heredada xmlns="TEI", corrompiendo el namespace en el
     # viaje árbol -> bytes -> árbol (verificado con tei_all.rng).
     etree.cleanup_namespaces(schema, top_nsmap={None: SCH_NS})
-    etree.ElementTree(schema).write(str(out), encoding='utf-8',
-                                    xml_declaration=True, pretty_print=True)
-    # Self-check: lo re-parseado debe contener exactamente lo cosechado.
-    chk = etree.parse(str(out))
-    chk_pat = len(chk.getroot().findall(S + 'pattern'))
-    chk_ns = len(chk.getroot().findall(S + 'ns'))
+    datos = etree.tostring(etree.ElementTree(schema), encoding='utf-8',
+                           xml_declaration=True, pretty_print=True)
+    # Self-check: lo re-parseado debe contener exactamente lo cosechado. Se
+    # hace sobre los bytes, ANTES de escribir: un esquema mutilado nunca
+    # llega a la caché.
+    chk = etree.fromstring(datos)
+    chk_pat = len(chk.findall(S + 'pattern'))
+    chk_ns = len(chk.findall(S + 'ns'))
     if (chk_pat, chk_ns) != (n_pat, n_ns):
         morir(f"Self-check de cosecha fallido en {out.name}: cosechados "
               f"{n_pat} patterns/{n_ns} ns, re-leídos {chk_pat}/{chk_ns}. "
               f"Corrupción de namespaces en la serialización; no se valida "
               f"contra un esquema mutilado.")
+    escribir_atomico(out, datos)
     print(f"[cosecha] {rng.name} -> {out.name} "
           f"({n_pat} patterns, {n_ns} ns)", file=sys.stderr)
     return out
@@ -194,16 +232,24 @@ def obtener_recurso(href, base_dir: Path, refresh=False) -> Path:
                   + '-' + (Path(urlparse(href).path).name or 'schema'))
         dest = cache / nombre
         if dest.exists() and not refresh:
-            print(f"[caché] {href} ya descargado -> {dest.name} "
-                  f"(--refresh para forzar)", file=sys.stderr)
-            return dest
+            if bien_formado(dest):
+                print(f"[caché] {href} ya descargado -> {dest.name} "
+                      f"(--refresh para forzar)", file=sys.stderr)
+                return dest
+            print(f"[aviso] la copia en caché de {href} está incompleta o "
+                  f"dañada; se vuelve a descargar", file=sys.stderr)
         print(f"[descarga] {href}", file=sys.stderr)
         try:
             with urllib.request.urlopen(href, timeout=60) as r:
                 datos = r.read()
         except Exception as e:
             morir(f"No pude descargar el esquema {href}: {e}")
-        dest.write_bytes(datos)
+        try:
+            etree.fromstring(datos)
+        except etree.XMLSyntaxError as e:
+            morir(f"Lo descargado de {href} no es XML bien formado ({e}); "
+                  f"no se guarda en caché.")
+        escribir_atomico(dest, datos)
         return dest
     p = (base_dir / href).resolve() if not Path(href).is_absolute() else Path(href)
     exigir_archivo(p, f"el esquema referido por xml-model ({href})")
