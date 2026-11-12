@@ -19,6 +19,15 @@ let jingMissingLogged = false;
  *  not on every save. */
 let interpreterNotified = false;
 
+/** Last validation outcome per document, shown in the status bar for the
+ *  active editor (so a clean result is visible too, not just problems). */
+type Outcome =
+  | { state: 'running' }
+  | { state: 'done'; errors: number; warnings: number; infos: number; relaxng: boolean; at: Date }
+  | { state: 'failed'; message: string; at: Date };
+const outcomes = new Map<string, Outcome>();
+let statusItem: vscode.StatusBarItem;
+
 interface RunResult { code: number | null; stdout: string; stderr: string; spawnError?: NodeJS.ErrnoException }
 
 const cfg = (doc: vscode.TextDocument) =>
@@ -28,10 +37,15 @@ export function activate(context: vscode.ExtensionContext) {
   extensionRoot = context.extensionPath;
   diagnostics = vscode.languages.createDiagnosticCollection('schematron');
   output = vscode.window.createOutputChannel('Schematron');
+  statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  statusItem.name = 'Schematron';
+  statusItem.command = 'schematron.showOutput';
 
   context.subscriptions.push(
     diagnostics,
     output,
+    statusItem,
+    vscode.window.onDidChangeActiveTextEditor(() => updateStatus()),
     vscode.commands.registerCommand('schematron.validate', () => {
       const doc = vscode.window.activeTextEditor?.document;
       if (!doc) { return; }
@@ -52,7 +66,9 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.workspace.onDidCloseTextDocument(doc => {
       cancel(doc.uri.toString());
+      outcomes.delete(doc.uri.toString());
       diagnostics.delete(doc.uri);
+      updateStatus();
     }),
     vscode.workspace.onDidChangeConfiguration(e => {
       if (!e.affectsConfiguration('schematron')) { return; }
@@ -140,8 +156,9 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
   const schema = resolveSetting(doc, c.get<string>('schema') ?? '');
   const schemaFlag = { rng: '-r', sch: '-s', odd: '-o' }[c.get<string>('schemaType') ?? 'rng'] ?? '-r';
 
-  const status = vscode.window.setStatusBarMessage(`$(sync~spin) Schematron: ${path.basename(file)}`);
-  try {
+  setOutcome(key, { state: 'running' });
+  let failedMessage: string | undefined;
+  {
     const args = [validator, '--json', ...(schema ? [schemaFlag, schema] : []), file];
     const r = await run(python, args, cwd, key, timeoutMs);
     if (generation.get(key) !== gen) { return; }        // superseded
@@ -153,6 +170,7 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
         `(${r.spawnError.code ?? r.spawnError.message}). Set schematron.pythonPath ` +
         `to a Python that has saxonche and lxml.`;
       items = [failure(msg)];
+      failedMessage = msg;
       void notifyInterpreter(msg);
     } else {
       try {
@@ -161,28 +179,69 @@ async function validate(doc: vscode.TextDocument, manual: boolean) {
       } catch {
         const f = explainFailure(r.stderr, python);
         items = [failure(f.message)];
+        failedMessage = f.message;
         if (f.interpreter) { void notifyInterpreter(f.message); }
       }
     }
 
+    let relaxngRan = false;
     if (parsed?.source.type === 'rng' && c.get<boolean>('relaxng.enabled')) {
-      items.push(...await relaxng(doc, parsed.source.path, file, cwd, key, timeoutMs));
+      const rItems = await relaxng(doc, parsed.source.path, file, cwd, key, timeoutMs);
       if (generation.get(key) !== gen) { return; }
+      relaxngRan = rItems !== null;
+      items.push(...(rItems ?? []));
     }
 
     diagnostics.set(doc.uri, items.map(i => toDiagnostic(doc, i)));
-    if (manual) {
-      const n = items.length;
-      vscode.window.setStatusBarMessage(
-        n ? `Schematron: ${n} problem${n === 1 ? '' : 's'}` : 'Schematron: valid', 5000);
-    }
-  } finally {
-    status.dispose();
+    const count = (s: Item['severity']) => items.filter(i => i.severity === s).length;
+    setOutcome(key, failedMessage !== undefined
+      ? { state: 'failed', message: failedMessage, at: new Date() }
+      : { state: 'done', errors: count('error'), warnings: count('warning'),
+          infos: count('info'), relaxng: relaxngRan, at: new Date() });
   }
 }
 
+function setOutcome(key: string, o: Outcome) {
+  outcomes.set(key, o);
+  updateStatus();
+}
+
+/** Status bar item for the active editor's document: spinner while running,
+ *  a check mark when clean, counts when there are problems. Hidden for
+ *  documents the extension does not validate. */
+function updateStatus() {
+  const doc = vscode.window.activeTextEditor?.document;
+  const o = doc && outcomes.get(doc.uri.toString());
+  if (!o) { statusItem.hide(); return; }
+  statusItem.backgroundColor = undefined;
+  const click = '\n\nClick to show the Schematron output.';
+  const time = (d: Date) => d.toLocaleTimeString();
+  if (o.state === 'running') {
+    statusItem.text = '$(sync~spin) Schematron';
+    statusItem.tooltip = 'Validating…';
+  } else if (o.state === 'failed') {
+    statusItem.text = '$(alert) Schematron: failed';
+    statusItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+    statusItem.tooltip = `Validation could not run (${time(o.at)}):\n${o.message}${click}`;
+  } else {
+    const layers = o.relaxng ? 'Schematron and RelaxNG' : 'Schematron';
+    const n = o.errors + o.warnings + o.infos;
+    if (n === 0) {
+      statusItem.text = '$(check) Schematron';
+      statusItem.tooltip = `Valid: no ${layers} problems (checked ${time(o.at)}).${click}`;
+    } else {
+      statusItem.text = `$(${o.errors ? 'error' : 'warning'}) Schematron: ${n}`;
+      const parts = [[o.errors, 'error'], [o.warnings, 'warning'], [o.infos, 'info']]
+        .filter(([k]) => k).map(([k, w]) => `${k} ${w}${k === 1 ? '' : 's'}`);
+      statusItem.tooltip = `${parts.join(', ')} (${layers}, checked ${time(o.at)}). ` +
+        `See the Problems panel.${click}`;
+    }
+  }
+  statusItem.show();
+}
+
 async function relaxng(doc: vscode.TextDocument, rng: string, file: string,
-                       cwd: string, key: string, timeoutMs: number): Promise<Item[]> {
+                       cwd: string, key: string, timeoutMs: number): Promise<Item[] | null> {
   const jing = cfg(doc).get<string>('jingPath') || 'jing';
   const r = await run(jing, [rng, file], cwd, key, timeoutMs);
   if (r.spawnError) {
@@ -191,7 +250,7 @@ async function relaxng(doc: vscode.TextDocument, rng: string, file: string,
       output.appendLine(`jing not found (${jing}); RelaxNG layer skipped. ` +
         `Install jing, set schematron.jingPath, or disable schematron.relaxng.enabled.`);
     }
-    return [];
+    return null;                                    // layer did not run
   }
   // jing: 0 valid, 1 invalid; anything else is an environment error.
   if (r.code !== null && r.code > 1) {

@@ -82,12 +82,12 @@ test('validate.py --json round trip', { skip: !process.env.VALIDATE_PYTHON }, ()
   fs.writeFileSync(sch, `<schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2">
   <ns prefix="tei" uri="http://www.tei-c.org/ns/1.0"/>
   <pattern id="len"><let name="max" value="3"/>
-    <rule context="tei:p"><assert test="string-length(.) le $max" role="warning">too long: <value-of select="string-length(.)"/></assert></rule>
+    <rule context="tei:p"><assert test="string-length(.) le $max" role="warning"><name/> too long: <value-of select="string-length(.)"/>, rend="<value-of select="@rend"/>"</assert></rule>
   </pattern>
 </schema>`);
   fs.writeFileSync(doc, `<TEI xmlns="http://www.tei-c.org/ns/1.0">
   <p>ok</p>
-  <p>much too long</p>
+  <p rend="x">much too long</p>
 </TEI>`);
   const validator = path.resolve(__dirname, '..', '..', '..', 'validate.py');
   let stdout = '';
@@ -99,6 +99,8 @@ test('validate.py --json round trip', { skip: !process.env.VALIDATE_PYTHON }, ()
     stdout = e.stdout.toString();
   }
   const items = itemsFromValidate(JSON.parse(stdout), doc);
-  assert.deepEqual(items, [{ line: 2, message: 'too long: 13', severity: 'warning',
+  // <name/> gives the element name; value-of on an attribute gives its value,
+  // with the surrounding quotes kept tight.
+  assert.deepEqual(items, [{ line: 2, message: 'p too long: 13, rend="x"', severity: 'warning',
                              source: 'Schematron', code: 'len' }]);
 });

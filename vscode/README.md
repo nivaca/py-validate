@@ -22,6 +22,12 @@ the Problems panel.
 - **Incomplete results:** rules that fail to evaluate (XPath errors) are
   reported as one warning on the first line, because the verdict is then
   incomplete.
+- **Status bar:** for the active file, it shows a spinner while validating,
+  `✓ Schematron` when the file is clean, `Schematron: N` when there are
+  problems, and `Schematron: failed` (red) when validation could not run.
+  The tooltip gives the details and the time of the last check; clicking it
+  opens the output log. It is hidden for XML files the extension does not
+  validate.
 - **Saved files only:** validation always runs on the saved file on disk, not
   on unsaved edits.
 

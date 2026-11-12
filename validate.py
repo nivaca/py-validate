@@ -33,9 +33,10 @@ Semántica implementada (subconjunto deliberado de ISO Schematron):
   - Contextos relativos ("tei:lem[...]") se evalúan como //(contexto);
     los absolutos ("/tei:TEI/...") tal cual.
   - First-match shadowing DENTRO de cada pattern se respeta.
+  - sch:value-of y sch:name en los mensajes se interpolan en el contexto del
+    nodo infractor; en el recuento agregado aparecen como '…'.
   - No implementado (el runner avisa una vez por tipo y continúa): phases,
-    patterns/reglas abstractos, diagnostics, xsl:key, sch:value-of dentro de
-    mensajes (el texto se aplana), sqf:fix (Quick Fixes de oXygen: no afectan
+    patterns/reglas abstractos, diagnostics, xsl:key, sqf:fix (Quick Fixes de oXygen: no afectan
     a los veredictos).
 
 Requisitos: pip install saxonche lxml
@@ -58,7 +59,7 @@ from pathlib import Path
 from lxml import etree
 from saxonche import PySaxonProcessor
 
-__version__ = "1.5"
+__version__ = "1.6"
 
 SCH_NS = 'http://purl.oclc.org/dsdl/schematron'
 S = f'{{{SCH_NS}}}'
@@ -270,24 +271,31 @@ def leer_lets(el):
     return [(l.get('name'), l.get('value')) for l in el.findall(S + 'let')]
 
 
+def espacios(texto):
+    """Colapsa espacios en blanco y recorta los extremos."""
+    return re.sub(r'\s+', ' ', texto).strip()
+
+
 def leer_mensaje(t):
-    """Texto aplanado de un assert/report y sus segmentos ('txt' | 'exp')
-    para interpolar sch:value-of."""
-    segs = []
-    if t.text and t.text.strip():
-        segs.append(('txt', ' '.join(t.text.split())))
+    """Mensaje de un assert/report: plantilla estática (con '…' en lugar de
+    lo dinámico, para agrupar el recuento) y segmentos ('txt' | 'exp') para
+    interpolar. sch:value-of aporta su @select; sch:name, el nombre del nodo
+    de contexto (o de su @path). Los segmentos de texto conservan sus
+    espacios de borde: 'corresp="<value-of/>"' no debe convertirse en
+    'corresp=" # "'."""
+    segs = [('txt', t.text or '')]
     for hijo in t:
         if isinstance(hijo.tag, str):
             hq = etree.QName(hijo)
             if hq.namespace == SCH_NS and hq.localname == 'value-of':
                 segs.append(('exp', hijo.get('select')))
-            else:
-                txt = ' '.join(''.join(hijo.itertext()).split())
-                if txt:
-                    segs.append(('txt', txt))
-        if hijo.tail and hijo.tail.strip():
-            segs.append(('txt', ' '.join(hijo.tail.split())))
-    msg = ' '.join(s for k, s in segs if k == 'txt')
+            elif hq.namespace == SCH_NS and hq.localname == 'name':
+                segs.append(('exp', f"name({hijo.get('path') or '.'})"))
+            else:                               # emph, dir, span...
+                segs.append(('txt', ''.join(hijo.itertext())))
+        segs.append(('txt', hijo.tail or ''))
+    segs = [(k, v) for k, v in segs if v]
+    msg = espacios(''.join(v if k == 'txt' else '…' for k, v in segs))
     return msg, segs
 
 
@@ -327,7 +335,12 @@ def cargar_reglas(sch_path: Path):
                                    f'no afectan a los veredictos')
                 elif qn.localname in ('assert', 'report'):
                     msg, segs = leer_mensaje(t)
-                    segs = [(k, con_lets(lets, v) if k == 'exp' else v)
+                    # value-of produce el VALOR de cadena de cada ítem (no
+                    # su serialización: un atributo daría 'x="v"').
+                    segs = [(k, 'string-join((for $VALIDATE_V in ('
+                                f'{con_lets(lets, v)}) return '
+                                "string($VALIDATE_V)), ' ')")
+                            if k == 'exp' else (k, v)
                             for k, v in segs]
                     tests.append((qn.localname, con_lets(lets, t.get('test')),
                                   msg, segs, t.get('role') or ''))
@@ -422,7 +435,7 @@ def validar(doc_path: Path, nss, patterns, proc, n_lineas=None):
                 else:
                     r = en(node, xp.evaluate, v)
                     partes.append(str(r) if r is not None else '')
-            return ' '.join(p for p in partes if p)
+            return espacios(''.join(partes))
         except Exception:
             return msg
 

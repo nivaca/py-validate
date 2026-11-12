@@ -2,4 +2,4 @@ __pycache__/
 common/
 odds/
 rng/
-bak/
+bak/.schema-cache/
