@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""validar_smed.py — Validación Schematron de documentos TEI desde el terminal.
+"""validate.py — Validación Schematron de documentos TEI desde el terminal.
 
 Uso:
-    python3 validar_smed.py (-o ODD | -s SCH | -r RNG) [-v] [--max N] DOC.xml [...]
+    python3 validate.py (-o ODD | -s SCH | -r RNG) [-v] [--max N] DOC.xml [...]
 
 Tres fuentes de reglas, mutuamente excluyentes:
   -o/--odd  ODD con Schematron embebido (p. ej. smed-schema.xml): se extrae
@@ -28,6 +28,8 @@ Código de salida: 0 sin infracciones, 1 con infracciones,
 
 Semántica implementada (subconjunto deliberado de ISO Schematron):
   - pattern / rule / assert / report / let  (let -> "let $x := ... return ...")
+    Los <let> de schema y de pattern se anteponen a los de cada regla
+    (evaluados en el contexto de la regla, no en la raíz del documento).
   - Contextos relativos ("tei:lem[...]") se evalúan como //(contexto);
     los absolutos ("/tei:TEI/...") tal cual.
   - First-match shadowing DENTRO de cada pattern se respeta.
@@ -55,7 +57,7 @@ from pathlib import Path
 from lxml import etree
 from saxonche import PySaxonProcessor
 
-__version__ = "1.3"
+__version__ = "1.4"
 
 SCH_NS = 'http://purl.oclc.org/dsdl/schematron'
 S = f'{{{SCH_NS}}}'
@@ -83,23 +85,29 @@ def exigir_archivo(path: Path, papel: str):
         morir(f"No existe {papel}: {path.resolve()}")
 
 
+def cache_al_dia(fuente: Path, derivado: Path) -> bool:
+    """La caché se invalida si cambia la fuente O el propio script (un
+    generador corregido debe regenerar sus derivados; episodio 2026-07-12)."""
+    frescura = max(fuente.stat().st_mtime, Path(__file__).stat().st_mtime)
+    if derivado.exists() and derivado.stat().st_mtime >= frescura:
+        print(f"[caché] {derivado.name} está al día", file=sys.stderr)
+        return True
+    return False
+
+
 # ---------------------------------------------------------------- fuentes
 
 def extraer_sch(odd: Path, proc: PySaxonProcessor) -> Path:
     """ODD -> .sch con extract-isosch.xsl, cacheado por mtime."""
     exigir_archivo(odd, 'el ODD')
     sch = odd.with_suffix('.sch')
-    # La caché se invalida si cambia la fuente O el propio script (un
-    # generador corregido debe regenerar sus derivados; episodio 2026-07-12).
-    frescura = max(odd.stat().st_mtime, Path(__file__).stat().st_mtime)
-    if sch.exists() and sch.stat().st_mtime >= frescura:
-        print(f"[caché] {sch.name} está al día", file=sys.stderr)
+    if cache_al_dia(odd, sch):
         return sch
     xsl = HERE / 'odds' / 'extract-isosch.xsl'
     if not xsl.is_file():
         morir(f"No encuentro {xsl}; descarga extract-isosch.xsl y "
-                 f"common/functions.xsl de TEIC/Stylesheets junto al script "
-                 f"(véase README §2).")
+              f"common/functions.xsl de TEIC/Stylesheets junto al script "
+              f"(véase README §2).")
     exe = proc.new_xslt30_processor().compile_stylesheet(stylesheet_file=str(xsl))
     try:
         out = exe.transform_to_string(source_file=str(odd))
@@ -124,9 +132,7 @@ def sch_desde_rng(rng: Path) -> Path:
     un ODD, deduplicados, a un .sch autónomo. Cacheado por mtime."""
     exigir_archivo(rng, 'el RelaxNG')
     out = rng.with_suffix('.harvested.sch')
-    frescura = max(rng.stat().st_mtime, Path(__file__).stat().st_mtime)
-    if out.exists() and out.stat().st_mtime >= frescura:
-        print(f"[caché] {out.name} está al día", file=sys.stderr)
+    if cache_al_dia(rng, out):
         return out
     t = etree.parse(str(rng))
     schema = etree.Element(S + 'schema', nsmap={None: SCH_NS})
@@ -147,7 +153,7 @@ def sch_desde_rng(rng: Path) -> Path:
                 n_pat += 1
     if not n_pat:
         morir(f"El RelaxNG {rng.name} no contiene anotaciones Schematron "
-                 f"embebidas (¿fue generado sin ellas?).")
+              f"embebidas (¿fue generado sin ellas?).")
     # Poda de declaraciones de namespace rancias arrastradas por deepcopy:
     # sin esto, lxml puede serializar un elemento {ISO}x sin prefijo bajo una
     # declaración heredada xmlns="TEI", corrompiendo el namespace en el
@@ -219,6 +225,28 @@ def clasificar_esquema(path: Path) -> str:
           f"indícalo explícitamente con -o, -s o -r.")
 
 
+def href_xml_model(doc_path: Path, preferencia=(SCH_NS, RELAXNG_NS)):
+    """href de la PI <?xml-model?> del documento: la primera cuyo
+    schematypens figure en `preferencia` (por orden); en su defecto, la
+    primera PI con href. Termina con código 3 si no hay ninguna."""
+    exigir_archivo(doc_path, 'el documento')
+    try:
+        tree = etree.parse(str(doc_path))
+    except etree.XMLSyntaxError as e:
+        morir(f"El documento {doc_path.name} no está bien formado: {e}")
+    entradas = [(pi.get('href'), pi.get('schematypens') or '')
+                for pi in tree.xpath('//processing-instruction("xml-model")')
+                if pi.get('href')]
+    if not entradas:
+        morir(f"{doc_path.name} no lleva ninguna PI <?xml-model?> con href; "
+              f"indica el esquema explícitamente.")
+    for ns in preferencia:
+        for href, tipo in entradas:
+            if tipo == ns:
+                return href
+    return entradas[0][0]
+
+
 def detectar_esquema(doc_path: Path, refresh=False):
     """Lee las PIs <?xml-model?> del documento y devuelve (ruta, tipo).
     Preferencia: una PI con schematypens de Schematron; en su defecto, la
@@ -226,22 +254,7 @@ def detectar_esquema(doc_path: Path, refresh=False):
     (el patrón habitual: el mismo .rng asociado dos veces, una por capa)
     cuentan como una sola fuente. La clasificación final es por contenido,
     no por extensión ni por lo que la PI declare."""
-    exigir_archivo(doc_path, 'el documento')
-    try:
-        tree = etree.parse(str(doc_path))
-    except etree.XMLSyntaxError as e:
-        morir(f"El documento {doc_path.name} no está bien formado: {e}")
-    entradas = []
-    for pi in tree.xpath('//processing-instruction("xml-model")'):
-        href = pi.get('href')
-        if href:
-            entradas.append((href, pi.get('schematypens') or ''))
-    if not entradas:
-        morir(f"{doc_path.name} no lleva ninguna PI <?xml-model?> con href; "
-              f"indica el esquema con -o, -s o -r.")
-    hrefs_sch = [h for h, t in entradas if t == SCH_NS]
-    hrefs_rng = [h for h, t in entradas if t == RELAXNG_NS]
-    href = (hrefs_sch or hrefs_rng or [entradas[0][0]])[0]
+    href = href_xml_model(doc_path)
     print(f"[xml-model] esquema detectado: {href}", file=sys.stderr)
     local = obtener_recurso(href, doc_path.parent, refresh)
     tipo = clasificar_esquema(local)
@@ -252,28 +265,55 @@ def detectar_esquema(doc_path: Path, refresh=False):
 
 # ---------------------------------------------------------------- esquema
 
+def leer_lets(el):
+    return [(l.get('name'), l.get('value')) for l in el.findall(S + 'let')]
+
+
+def leer_mensaje(t):
+    """Texto aplanado de un assert/report y sus segmentos ('txt' | 'exp')
+    para interpolar sch:value-of."""
+    segs = []
+    if t.text and t.text.strip():
+        segs.append(('txt', ' '.join(t.text.split())))
+    for hijo in t:
+        if isinstance(hijo.tag, str):
+            hq = etree.QName(hijo)
+            if hq.namespace == SCH_NS and hq.localname == 'value-of':
+                segs.append(('exp', hijo.get('select')))
+            else:
+                txt = ' '.join(''.join(hijo.itertext()).split())
+                if txt:
+                    segs.append(('txt', txt))
+        if hijo.tail and hijo.tail.strip():
+            segs.append(('txt', ' '.join(hijo.tail.split())))
+    msg = ' '.join(s for k, s in segs if k == 'txt')
+    return msg, segs
+
+
 def cargar_reglas(sch_path: Path):
-    """Devuelve (namespaces, patterns); cada pattern es (id, [reglas]) y cada
-    regla (context, lets, tests) con test = (tipo, xpath, mensaje)."""
+    """Devuelve (namespaces, patterns); cada pattern es (id, [reglas]), cada
+    regla (context, [tests]) y cada test (tipo, xpath, mensaje, segmentos).
+    Los <let> (de schema, pattern y regla, por ese orden) ya van integrados
+    en las expresiones XPath de tests y segmentos."""
     exigir_archivo(sch_path, 'el Schematron')
-    tree = etree.parse(str(sch_path))
-    root = tree.getroot()
+    root = etree.parse(str(sch_path)).getroot()
     nss = {ns.get('prefix'): ns.get('uri') for ns in root.iter(S + 'ns')
            if ns.get('prefix')}
+    lets_schema = leer_lets(root)
     patterns = []
     for pat in root.iter(S + 'pattern'):
         if pat.get('abstract') == 'true' or pat.get('is-a'):
             avisar_una_vez('abstract',
                            'patterns abstractos/is-a no implementados: omitidos')
             continue
+        lets_pat = lets_schema + leer_lets(pat)
         reglas = []
         for rule in pat.findall(S + 'rule'):
             if rule.get('abstract') == 'true':
                 avisar_una_vez('abstract-rule',
                                'reglas abstractas no implementadas: omitidas')
                 continue
-            lets = [(l.get('name'), l.get('value'))
-                    for l in rule.findall(S + 'let')]
+            lets = lets_pat + leer_lets(rule)
             tests = []
             for t in rule:
                 if not isinstance(t.tag, str):      # comentarios, PIs
@@ -284,29 +324,17 @@ def cargar_reglas(sch_path: Path):
                                    f'elementos ajenos a Schematron ignorados '
                                    f'(p. ej. {qn.localname} de {qn.namespace}); '
                                    f'no afectan a los veredictos')
-                    continue
-                if qn.localname in ('assert', 'report'):
-                    segs = []
-                    if t.text and t.text.strip():
-                        segs.append(('txt', ' '.join(t.text.split())))
-                    for hijo in t:
-                        if isinstance(hijo.tag, str):
-                            hq = etree.QName(hijo)
-                            if hq.namespace == SCH_NS and hq.localname == 'value-of':
-                                segs.append(('exp', hijo.get('select')))
-                            else:
-                                txt = ' '.join(''.join(hijo.itertext()).split())
-                                if txt:
-                                    segs.append(('txt', txt))
-                        if getattr(hijo, 'tail', None) and hijo.tail.strip():
-                            segs.append(('txt', ' '.join(hijo.tail.split())))
-                    msg = ' '.join(s for k, s in segs if k == 'txt')
-                    tests.append((qn.localname, t.get('test'), msg, segs))
+                elif qn.localname in ('assert', 'report'):
+                    msg, segs = leer_mensaje(t)
+                    segs = [(k, con_lets(lets, v) if k == 'exp' else v)
+                            for k, v in segs]
+                    tests.append((qn.localname, con_lets(lets, t.get('test')),
+                                  msg, segs))
                 elif qn.localname != 'let':
                     avisar_una_vez(f'el:{qn.localname}',
                                    f'elemento Schematron no implementado: '
                                    f'{qn.localname} (omitido)')
-            reglas.append((rule.get('context'), lets, tests))
+            reglas.append((rule.get('context'), tests))
         if reglas:
             patterns.append((pat.get('id') or '', reglas))
     if root.find(S + 'phase') is not None:
@@ -322,12 +350,25 @@ def con_lets(lets, expr):
     # de la regla. Se liga en la posición más externa y se sustituye, lo que
     # reproduce exactamente esa semántica (las Guidelines P5 lo usan).
     if 'current()' in expr:
-        expr = re.sub(r'current\(\)', '$VALIDATE_CTX', expr)
+        expr = expr.replace('current()', '$VALIDATE_CTX')
         expr = f"let $VALIDATE_CTX := . return ({expr})"
     return expr
 
 
 # ------------------------------------------------------------- validación
+
+def ruta_lxml(path_q, nss):
+    """fn:path() (notación Q{uri}local) -> XPath 1.0 evaluable por lxml."""
+    def paso(m):
+        uri, local = m.group(1), m.group(2)
+        if not uri:
+            return local
+        for pre, u in nss.items():
+            if u == uri:
+                return f'{pre}:{local}'
+        return f"*[local-name()='{local}' and namespace-uri()='{uri}']"
+    return re.sub(r'Q\{([^}]*)\}([^\[/]+)', paso, path_q)
+
 
 def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
     exigir_archivo(doc_path, 'el documento')
@@ -342,6 +383,14 @@ def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
     doc = proc.parse_xml(xml_file_name=str(doc_path))
     xp.set_context(xdm_item=doc)
 
+    def en(node, metodo, expr):
+        """Evalúa expr con `node` como contexto y restaura el documento."""
+        xp.set_context(xdm_item=node)
+        try:
+            return metodo(expr)
+        finally:
+            xp.set_context(xdm_item=doc)
+
     def nodos(ctx):
         expr = ctx if ctx.startswith('/') else f'//({ctx})'
         r = xp.evaluate(expr)
@@ -349,26 +398,29 @@ def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
             return []
         return [r[i] for i in range(r.size)] if hasattr(r, 'size') else [r]
 
-    def fnpath(node):
-        xp.set_context(xdm_item=node)
+    def interpolar(node, msg, segs):
+        if not any(k == 'exp' for k, _ in segs):
+            return msg
         try:
-            return str(xp.evaluate_single('path(.)'))
-        finally:
-            xp.set_context(xdm_item=doc)
+            partes = []
+            for k, v in segs:
+                if k == 'txt':
+                    partes.append(v)
+                else:
+                    r = en(node, xp.evaluate, v)
+                    partes.append(str(r) if r is not None else '')
+            return ' '.join(p for p in partes if p)
+        except Exception:
+            return msg
 
     def linea_e_id(path_q):
-        """fn:path() con notación Q{uri} -> línea y xml:id vía lxml."""
-        def q2p(m):
-            uri = m.group(1)
-            for pre, u in nss.items():
-                if u == uri:
-                    return f'{pre}:'
-            return '*:'                       # fuera de los ns declarados
-        lp = re.sub(r'Q\{([^}]*)\}', q2p, path_q)
+        """Número de línea y xml:id del ancestro identificable, vía lxml."""
         try:
-            tgt = lx.xpath(lp, namespaces=nss)
+            tgt = lx.xpath(ruta_lxml(path_q, nss), namespaces=nss)
             if tgt:
                 el = tgt[0]
+                if not isinstance(el, etree._Element):   # atributo, texto
+                    el = el.getparent()
                 anc = el.xpath('ancestor-or-self::*[@xml:id][1]')
                 xid = anc[0].get(XMLID) if anc else '—'
                 return el.sourceline, xid
@@ -377,48 +429,34 @@ def validar(doc_path: Path, nss, patterns, proc, verbose=False, max_list=50):
         return None, '—'
 
     infracciones = []
+    errores = Counter()
     t0 = time.time()
     for pat_id, reglas in patterns:
         ya_casados = set()                    # first-match shadowing
-        for ctx, lets, tests in reglas:
+        for ctx, tests in reglas:
             for node in nodos(ctx):
-                path_id = fnpath(node)
+                path_id = str(en(node, xp.evaluate_single, 'path(.)'))
                 if path_id in ya_casados:
                     continue
                 ya_casados.add(path_id)
                 for tipo, test, msg, segs in tests:
-                    xp.set_context(xdm_item=node)
                     try:
-                        val = xp.effective_boolean_value(con_lets(lets, test))
+                        val = en(node, xp.effective_boolean_value, test)
                     except Exception as e:
-                        val = None
-                        print(f"[ERROR XPath] regla '{msg[:50]}': {e}",
-                              file=sys.stderr)
-                    finally:
-                        xp.set_context(xdm_item=doc)
-                    if val is None:
+                        errores[(msg[:50], str(e).strip())] += 1
                         continue
-                    if (tipo == 'assert' and not val) or \
-                       (tipo == 'report' and val):
-                        interp = msg
-                        if any(k == 'exp' for k, _ in segs):
-                            try:
-                                partes = []
-                                for k, v in segs:
-                                    if k == 'txt':
-                                        partes.append(v)
-                                    else:
-                                        xp.set_context(xdm_item=node)
-                                        r = xp.evaluate(con_lets(lets, v))
-                                        xp.set_context(xdm_item=doc)
-                                        partes.append(str(r) if r is not None else '')
-                                interp = ' '.join(p for p in partes if p)
-                            except Exception:
-                                xp.set_context(xdm_item=doc)
-                        infracciones.append((path_id, msg, interp))
+                    if val == (tipo == 'report'):
+                        infracciones.append(
+                            (path_id, msg, interpolar(node, msg, segs)))
 
+    for (msg, err), n in errores.items():
+        print(f"[ERROR XPath] regla '{msg}': {err} ({n} nodos)",
+              file=sys.stderr)
     print(f"\n== {doc_path.name} — {len(infracciones)} infracciones "
           f"({time.time()-t0:.1f}s) ==")
+    if errores:
+        print(f"[!] {sum(errores.values())} evaluaciones fallidas en "
+              f"{len(errores)} reglas: el veredicto es INCOMPLETO")
     for msg, n in Counter(m for _, m, _ in infracciones).most_common():
         print(f"{n:5d}  {msg[:100]}")
     if verbose and infracciones:

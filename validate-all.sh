@@ -82,25 +82,12 @@ else
   RNG=$(python3 - "$VALIDATE" "$1" <<'PY'
 import sys, importlib.util
 from pathlib import Path
-from lxml import etree
 spec = importlib.util.spec_from_file_location("validate", sys.argv[1])
 v = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(v)
 doc = Path(sys.argv[2])
-tree = etree.parse(str(doc))
-pis = tree.xpath('//processing-instruction("xml-model")')
-href = None
-for pi in pis:                       # preferencia: PI tipada RelaxNG
-    if pi.get('href') and pi.get('schematypens') == v.RELAXNG_NS:
-        href = pi.get('href'); break
-if not href:                         # respaldo: cualquier PI con href
-    for pi in pis:
-        if pi.get('href'):
-            href = pi.get('href'); break
-if not href:
-    print(f"{doc.name} no lleva PI xml-model con href; pasa el esquema "
-          f"explícitamente", file=sys.stderr)
-    sys.exit(3)
+# preferencia: PI tipada RelaxNG; respaldo: cualquier PI con href
+href = v.href_xml_model(doc, preferencia=(v.RELAXNG_NS,))
 local = v.obtener_recurso(href, doc.parent)
 if v.clasificar_esquema(local) != 'rng':
     print(f"El esquema detectado ({href}) no es RelaxNG; la capa "
