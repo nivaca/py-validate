@@ -61,7 +61,7 @@ from pathlib import Path
 from lxml import etree
 from saxonche import PySaxonProcessor
 
-__version__ = "1.8"
+__version__ = "1.9"
 
 SCH_NS = 'http://purl.oclc.org/dsdl/schematron'
 S = f'{{{SCH_NS}}}'
